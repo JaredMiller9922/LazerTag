@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "ir_nec_transceiver",
-    "project_version":    "f8ff731",
+    "project_version":    "cfd97e7-dirty",
     "project_path":       "C:/Users/jared/Desktop/LazerTag/LazerTag",
     "idf_path":           "C:/Users/jared/esp/v5.2.1/esp-idf",
     "build_dir":          "C:/Users/jared/Desktop/LazerTag/LazerTag/build",

@@ -1,5 +1,4 @@
-/*
- * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD
+/* * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Unlicense OR CC0-1.0
  */
@@ -28,6 +27,13 @@
 #define NEC_PAYLOAD_ONE_DURATION_1   1690
 #define NEC_REPEAT_CODE_DURATION_0   9000
 #define NEC_REPEAT_CODE_DURATION_1   2250
+
+/**
+ * @brief Team Codes
+ */
+#define RED_TEAM  0x01
+#define BLUE_TEAM 0x02
+#define GREEN_TEAM  0x03
 
 static const char *TAG = "example";
 
@@ -129,6 +135,21 @@ static void example_parse_nec_frame(rmt_symbol_word_t *rmt_nec_symbols, size_t s
     case 34: // NEC normal frame
         if (nec_parse_frame(rmt_nec_symbols)) {
             printf("Address=%04X, Command=%04X\r\n\r\n", s_nec_code_address, s_nec_code_command);
+            // Check Player ID
+            switch (s_nec_code_command) {
+            case RED_TEAM:
+                printf("Signal received from Player: RED\r\n");
+                break;
+            case BLUE_TEAM:
+                printf("Signal received from Player: BLUE\r\n");
+                break;
+            case GREEN_TEAM:
+                printf("Signal received from Player: GREEN\r\n");
+                break;
+            default:
+                printf("Unknown player ID\r\n");
+                break;
+            }
         }
         break;
     case 2: // NEC repeat frame
@@ -227,7 +248,8 @@ void app_main(void)
             // timeout, transmit predefined IR NEC packets
             const ir_nec_scan_code_t scan_code = {
                 .address = 0x0440,
-                .command = 0x3003,
+                // .command = 0x3003,
+                .command = RED_TEAM,
             };
             ESP_ERROR_CHECK(rmt_transmit(tx_channel, nec_encoder, &scan_code, sizeof(scan_code), &transmit_config));
         }
