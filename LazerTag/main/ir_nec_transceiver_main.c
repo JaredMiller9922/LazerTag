@@ -10,6 +10,7 @@
 #include "driver/rmt_tx.h"
 #include "driver/rmt_rx.h"
 #include "ir_nec_encoder.h"
+#include "driver/gpio.h"
 
 #define EXAMPLE_IR_RESOLUTION_HZ     1000000 // 1MHz resolution, 1 tick = 1us
 #define EXAMPLE_IR_TX_GPIO_NUM       17
@@ -35,7 +36,27 @@
 #define BLUE_TEAM 0x02
 #define GREEN_TEAM  0x03
 
+/**
+ * @brief LED GPIO Pins
+ */
+#define RED_GPIO GPIO_NUM_4
+#define GREEN_GPIO GPIO_NUM_13
+#define BLUE_GPIO GPIO_NUM_14
+
 static const char *TAG = "example";
+
+void configure_led_gpio(gpio_num_t gpio_num)
+{
+    // Configure the GPIO pin as output
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << gpio_num),  // Set the GPIO pin
+        .mode = GPIO_MODE_OUTPUT,                // Set as output mode
+        .pull_up_en = GPIO_PULLUP_DISABLE,       // Disable pull-up
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,   // Disable pull-down
+        .intr_type = GPIO_INTR_DISABLE           // Disable interrupts
+    };
+    gpio_config(&io_conf);
+}
 
 /**
  * @brief Saving NEC decode results
@@ -139,12 +160,21 @@ static void example_parse_nec_frame(rmt_symbol_word_t *rmt_nec_symbols, size_t s
             switch (s_nec_code_command) {
             case RED_TEAM:
                 printf("Signal received from Player: RED\r\n");
-                break;
-            case BLUE_TEAM:
-                printf("Signal received from Player: BLUE\r\n");
+                gpio_set_level(RED_GPIO, 1);
+                gpio_set_level(GREEN_GPIO, 0);
+                gpio_set_level(BLUE_GPIO, 0);
                 break;
             case GREEN_TEAM:
                 printf("Signal received from Player: GREEN\r\n");
+                gpio_set_level(RED_GPIO, 0);
+                gpio_set_level(GREEN_GPIO, 1);
+                gpio_set_level(BLUE_GPIO, 0);
+                break;
+            case BLUE_TEAM:
+                printf("Signal received from Player: BLUE\r\n");
+                gpio_set_level(RED_GPIO, 0);
+                gpio_set_level(GREEN_GPIO, 0);
+                gpio_set_level(BLUE_GPIO, 1);
                 break;
             default:
                 printf("Unknown player ID\r\n");
@@ -174,6 +204,11 @@ static bool example_rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt
 
 void app_main(void)
 {
+    // Configure GPIOS For LED's
+    configure_led_gpio(RED_GPIO);
+    configure_led_gpio(GREEN_GPIO);
+    configure_led_gpio(BLUE_GPIO);
+
     ESP_LOGI(TAG, "create RMT RX channel");
     rmt_rx_channel_config_t rx_channel_cfg = {
         .clk_src = RMT_CLK_SRC_DEFAULT,
@@ -249,7 +284,7 @@ void app_main(void)
             const ir_nec_scan_code_t scan_code = {
                 .address = 0x0440,
                 // .command = 0x3003,
-                .command = RED_TEAM,
+                .command = BLUE_TEAM,
             };
             ESP_ERROR_CHECK(rmt_transmit(tx_channel, nec_encoder, &scan_code, sizeof(scan_code), &transmit_config));
         }
