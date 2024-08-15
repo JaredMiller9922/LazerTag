@@ -6,7 +6,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
-#include "esp_log.h"
+#include "esp_log.h"`
 #include "driver/rmt_tx.h"
 #include "driver/rmt_rx.h"
 #include "ir_nec_encoder.h"
@@ -42,6 +42,13 @@
 #define RED_GPIO GPIO_NUM_4
 #define GREEN_GPIO GPIO_NUM_13
 #define BLUE_GPIO GPIO_NUM_14
+#define TEAM_INDICATOR_LED GPIO_NUM_37
+
+/**
+ * @brief Trigger Gpio Pins
+ */
+#define TRIGGER_PIN GPIO_NUM_36
+
 
 static const char *TAG = "example";
 
@@ -57,6 +64,19 @@ void configure_led_gpio(gpio_num_t gpio_num)
     };
     gpio_config(&io_conf);
 }
+
+// Trigger Button Init
+void init_button(void) {
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << TRIGGER_PIN),  // Set the pin number
+        .mode = GPIO_MODE_INPUT,               // Set as input mode
+        .pull_up_en = GPIO_PULLUP_ENABLE,      // Enable internal pull-up resistor
+        .pull_down_en = GPIO_PULLDOWN_DISABLE, // Disable internal pull-down resistor
+        .intr_type = GPIO_INTR_DISABLE         // No interrupt needed for now
+    };
+    gpio_config(&io_conf);
+}
+
 
 /**
  * @brief Saving NEC decode results
@@ -143,7 +163,7 @@ static bool nec_parse_frame_repeat(rmt_symbol_word_t *rmt_nec_symbols)
 /**
  * @brief Decode RMT symbols into NEC scan code and print the result
  */
-static void example_parse_nec_frame(rmt_symbol_word_t *rmt_nec_symbols, size_t symbol_num)
+static void parse_nec_frame(rmt_symbol_word_t *rmt_nec_symbols, size_t symbol_num)
 {
     printf("NEC frame start---\r\n");
     for (size_t i = 0; i < symbol_num; i++) {
@@ -163,18 +183,24 @@ static void example_parse_nec_frame(rmt_symbol_word_t *rmt_nec_symbols, size_t s
                 gpio_set_level(RED_GPIO, 1);
                 gpio_set_level(GREEN_GPIO, 0);
                 gpio_set_level(BLUE_GPIO, 0);
+                vTaskDelay(pdMS_TO_TICKS(3000));  // TODO: This takes the program hostage
+                gpio_set_level(RED_GPIO,0);
                 break;
             case GREEN_TEAM:
                 printf("Signal received from Player: GREEN\r\n");
                 gpio_set_level(RED_GPIO, 0);
                 gpio_set_level(GREEN_GPIO, 1);
                 gpio_set_level(BLUE_GPIO, 0);
+                vTaskDelay(pdMS_TO_TICKS(3000));  // TODO: This takes the program hostage
+                gpio_set_level(GREEN_GPIO,0);
                 break;
             case BLUE_TEAM:
                 printf("Signal received from Player: BLUE\r\n");
                 gpio_set_level(RED_GPIO, 0);
                 gpio_set_level(GREEN_GPIO, 0);
                 gpio_set_level(BLUE_GPIO, 1);
+                vTaskDelay(pdMS_TO_TICKS(3000)); // TODO: This takes the program hostage
+                gpio_set_level(BLUE_GPIO,0);
                 break;
             default:
                 printf("Unknown player ID\r\n");
@@ -202,12 +228,28 @@ static bool example_rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt
     return high_task_wakeup == pdTRUE;
 }
 
+static void fire(rmt_channel_handle_t tx_channel, rmt_encoder_t *nec_encoder, rmt_transmit_config_t *transmit_config) {
+    // Define the IR NEC packet that you want to transmit
+    const ir_nec_scan_code_t scan_code = {
+        .address = 0x0440,  // Replace with your actual address
+        .command = RED_TEAM,  // Replace with your desired command (e.g., RED_TEAM, GREEN_TEAM, etc.)
+    };
+
+    // Transmit the IR signal using the RMT peripheral
+    ESP_ERROR_CHECK(rmt_transmit(tx_channel, nec_encoder, &scan_code, sizeof(scan_code), transmit_config));
+}
+
+
 void app_main(void)
 {
     // Configure GPIOS For LED's
     configure_led_gpio(RED_GPIO);
     configure_led_gpio(GREEN_GPIO);
     configure_led_gpio(BLUE_GPIO);
+    configure_led_gpio(TEAM_INDICATOR_LED);
+    init_button();
+
+    gpio_set_level(TEAM_INDICATOR_LED,1);
 
     ESP_LOGI(TAG, "create RMT RX channel");
     rmt_rx_channel_config_t rx_channel_cfg = {
@@ -273,20 +315,33 @@ void app_main(void)
     // ready to receive
     ESP_ERROR_CHECK(rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config));
     while (1) {
-        // wait for RX done signal
+        // Check Button State
+        int button_state = gpio_get_level(TRIGGER_PIN);
+        if (button_state == 0) {
+            ESP_LOGI("BUTTON", "Button pressed");
+            fire(tx_channel, nec_encoder, &transmit_config);
+        }
+
+        // Receiver Logic
+        // Check if RX is complete
         if (xQueueReceive(receive_queue, &rx_data, pdMS_TO_TICKS(1000)) == pdPASS) {
-            // parse the receive symbols and print the result
-            example_parse_nec_frame(rx_data.received_symbols, rx_data.num_symbols);
-            // start receive again
+            // Parse the received symbols and print the result
+            parse_nec_frame(rx_data.received_symbols, rx_data.num_symbols);
+            // Restart the receiver
             ESP_ERROR_CHECK(rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config));
-        } else {
-            // timeout, transmit predefined IR NEC packets
-            const ir_nec_scan_code_t scan_code = {
-                .address = 0x0440,
-                // .command = 0x3003,
-                .command = BLUE_TEAM,
-            };
-            ESP_ERROR_CHECK(rmt_transmit(tx_channel, nec_encoder, &scan_code, sizeof(scan_code), &transmit_config));
         }
     }
 }
+// int button_state = gpio_get_level(TRIGGER_PIN);
+//         if (button_state == 0) {
+//             ESP_LOGI("BUTTON", "Button pressed");
+//             fire(tx_channel, nec_encoder, &transmit_config);
+//         }
+        
+//         // wait for RX done signal
+//         if (xQueueReceive(receive_queue, &rx_data, pdMS_TO_TICKS(1000)) == pdPASS) {
+//             // parse the receive symbols and print the result
+//             example_parse_nec_frame(rx_data.received_symbols, rx_data.num_symbols);
+//             // start receive again
+//             ESP_ERROR_CHECK(rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config));
+//         }
