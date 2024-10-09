@@ -15,6 +15,7 @@ IRTransmitter::IRTransmitter(gpio_num_t tx_pin, uint32_t resolution_hz) {
  */
 IRTransmitter::~IRTransmitter() {
     rmt_disable(tx_channel);
+    rmt_del_encoder(nec_encoder);
     rmt_del_channel(tx_channel);
 }
 
@@ -61,11 +62,17 @@ void IRTransmitter::setupRMT(gpio_num_t tx_pin, uint32_t resolution_hz) {
  * in setupRMT.
  */
 void IRTransmitter::transmit(uint16_t address, uint16_t command) {
+    // Combine address and command into the NEC scan code structure
     ir_nec_scan_code_t scan_code = {
         .address = address,
         .command = command,
     };
 
+    // Proceed with the transmission
     ESP_LOGI(TAG, "Transmitting NEC packet: Address=0x%04X, Command=0x%04X", address, command);
+
     ESP_ERROR_CHECK(rmt_transmit(tx_channel, nec_encoder, &scan_code, sizeof(scan_code), &transmit_config));
 }
+
+
+

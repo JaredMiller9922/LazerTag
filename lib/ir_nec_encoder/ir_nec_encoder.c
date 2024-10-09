@@ -29,6 +29,10 @@ static size_t rmt_encode_ir_nec(rmt_encoder_t *encoder, rmt_channel_handle_t cha
     rmt_encoder_handle_t bytes_encoder = nec_encoder->bytes_encoder;
     switch (nec_encoder->state) {
     case 0: // send leading code
+        ESP_LOGI(TAG, "Leading Symbol: Level0=%d, Duration0=%d, Level1=%d, Duration1=%d", 
+        nec_encoder->nec_leading_symbol.level0, nec_encoder->nec_leading_symbol.duration0, 
+        nec_encoder->nec_leading_symbol.level1, nec_encoder->nec_leading_symbol.duration1);
+
         encoded_symbols += copy_encoder->encode(copy_encoder, channel, &nec_encoder->nec_leading_symbol,
                                                 sizeof(rmt_symbol_word_t), &session_state);
         if (session_state & RMT_ENCODING_COMPLETE) {
@@ -72,6 +76,7 @@ static size_t rmt_encode_ir_nec(rmt_encoder_t *encoder, rmt_channel_handle_t cha
         }
     }
 out:
+    ESP_LOGI(TAG, "Encoded %d symbols", encoded_symbols);
     *ret_state = state;
     return encoded_symbols;
 }

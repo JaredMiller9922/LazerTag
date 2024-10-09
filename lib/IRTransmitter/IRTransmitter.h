@@ -1,8 +1,11 @@
 #ifndef IR_TRANSMITTER_H
 #define IR_TRANSMITTER_H
 
+extern "C" {
+    #include "ir_nec_encoder.h"
+}
+
 #include "driver/rmt_tx.h"
-#include "ir_nec_encoder.h"
 
 class IRTransmitter {
 public:

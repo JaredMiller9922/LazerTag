@@ -12,6 +12,7 @@ public:
     
     void startReceiving();
 private:
+    rmt_symbol_word_t raw_symbols[64];  // 64 symbols to hold the received data
     rmt_channel_handle_t rx_channel;
     QueueHandle_t receive_queue;
     rmt_receive_config_t receive_config;
@@ -21,8 +22,9 @@ private:
     static bool nec_parse_frame(rmt_symbol_word_t *rmt_nec_symbols);
     static bool nec_parse_frame_repeat(rmt_symbol_word_t *rmt_nec_symbols);
     static bool nec_check_in_range(uint32_t signal_duration, uint32_t spec_duration);
-    static bool IRReceiver::nec_parse_logic0(rmt_symbol_word_t *rmt_nec_symbols) {};
-    static bool IRReceiver::nec_parse_logic1(rmt_symbol_word_t *rmt_nec_symbols) {};
+    static bool nec_parse_logic0(rmt_symbol_word_t *rmt_nec_symbols);
+    static bool nec_parse_logic1(rmt_symbol_word_t *rmt_nec_symbols);
+    static bool addressCommandHandler(uint16_t address, uint16_t command);
 
 };
 
