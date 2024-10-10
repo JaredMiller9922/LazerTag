@@ -1,5 +1,6 @@
 #include "IRReceiver.h"
 #include "esp_log.h"
+#include <functional>
 
 #define IR_NEC_DECODE_MARGIN 200
 #define TAG "IRReceiver"
@@ -16,13 +17,26 @@
 #define RED_TEAM_COMMAND 0x01
 #define BLUE_TEAM_COMMAND 0x02
 
-static uint16_t s_nec_code_address;
-static uint16_t s_nec_code_command;
+
+// TODO: These are here because of some weird behavior with having the callback static
+// This should one hundred percent be fixed
+uint16_t IRReceiver::s_nec_code_address = 0; // Initialize as needed
+uint16_t IRReceiver::s_nec_code_command = 0; // Initialize as needed
+std::function<void(uint16_t, uint16_t)> IRReceiver::rx_done_blaster_cb = nullptr;
+
 
 /**
  * @brief Constructor for the IRReceiver
  */
 IRReceiver::IRReceiver(gpio_num_t rx_pin, uint32_t resolution_hz) {
+    setupRMT(rx_pin, resolution_hz);
+}
+
+/**
+ * @brief Constructor for the IRReceiver that takes in a callback
+ */
+IRReceiver::IRReceiver(gpio_num_t rx_pin, uint32_t resolution_hz, std::function<void(uint16_t, uint16_t)> callbackArg = nullptr) {
+    rx_done_blaster_cb = callbackArg;
     setupRMT(rx_pin, resolution_hz);
 }
 
@@ -67,68 +81,57 @@ void IRReceiver::setupRMT(gpio_num_t rx_pin, uint32_t resolution_hz) {
  * @brief Callback that handles the end of the data being received. Creates a recieve queue that is used 
  * to manage data received.
  */
-bool IRReceiver::rx_done_callback(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data) {
+bool IRReceiver::rx_done_callback(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data)
+{
     BaseType_t high_task_wakeup = pdFALSE;
     QueueHandle_t receive_queue = (QueueHandle_t)user_data;
+    // send the received RMT symbols to the parser task
     xQueueSendFromISR(receive_queue, edata, &high_task_wakeup);
     return high_task_wakeup == pdTRUE;
 }
 
 /**
- * @brief Use the receive_queue to process the data that we have received. This method calls nec_parse_frame
- * which parses the address and the command from the next item in the receive_queue.
+ * @brief 
  */
 void IRReceiver::startReceiving() {
-    ESP_LOGI(TAG, "Entered the startReceiving method");
-
     rmt_rx_done_event_data_t rx_data;
 
-    // Start receiving RMT symbols
-    ESP_ERROR_CHECK(rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config));
+    ESP_LOGI(TAG, "Start Receiving Method Called");
 
-    // Wait for received data
-    if (xQueueReceive(receive_queue, &rx_data, pdMS_TO_TICKS(1000)) == pdPASS) {
-        size_t num_symbols = rx_data.num_symbols;
-
-        // Log the number of received symbols
-        ESP_LOGI(TAG, "Number of symbols received: %d", num_symbols);
-
-        // Print the first symbol if available
-        if (num_symbols > 0) {
-            ESP_LOGI(TAG, "First Symbol: Level0=%d, Duration0=%d, Level1=%d, Duration1=%d", 
-                     rx_data.received_symbols[0].level0, rx_data.received_symbols[0].duration0,
-                     rx_data.received_symbols[0].level1, rx_data.received_symbols[0].duration1);
-        } else {
-            ESP_LOGI(TAG, "No symbols received.");
-        }
-
-        // Print all symbols for inspection
-        for (size_t i = 0; i < num_symbols; i++) {
-            ESP_LOGI(TAG, "Symbol[%d]: Level0=%d, Duration0=%d, Level1=%d, Duration1=%d", 
-            i, rx_data.received_symbols[i].level0, rx_data.received_symbols[i].duration0,
-            rx_data.received_symbols[i].level1, rx_data.received_symbols[i].duration1);
-        }
-
-        // Check if it's a normal frame or a repeat frame
-        if (num_symbols == 34) {  // 34 symbols indicate a normal NEC frame
-            if (nec_parse_frame(rx_data.received_symbols)) {
-                ESP_LOGI(TAG, "Received Address=%04X, Command=%04X", s_nec_code_address, s_nec_code_command);
-            }
-        } 
-        else if (num_symbols == 2) {  // 2 symbols indicate a repeat frame
-            ESP_LOGI(TAG, "Ignoring Repeat Frames");
-        } 
-        else {
-            ESP_LOGI(TAG, "Incorrect number of symbols received! num_symbols = %d", num_symbols);
-        }
-
-        // Start receiving again
+    while (true) {
+        // Start receiving RMT symbols
         ESP_ERROR_CHECK(rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config));
+
+        // Wait for received data
+        if (xQueueReceive(receive_queue, &rx_data, portMAX_DELAY) == pdPASS) {
+            // Process received data
+            processReceivedData(&rx_data);
+        } else {
+            ESP_LOGI(TAG, "Receive timeout");
+        }
     }
 }
 
+/**
+ * @brief
+ */
+void IRReceiver::processReceivedData(const rmt_rx_done_event_data_t* rx_data) {
+    ESP_LOGI(TAG, "Some data was received");
+    size_t num_symbols = rx_data->num_symbols;
 
-
+    // Check if it's a normal frame or a repeat frame
+    if (num_symbols == 34) {  // 34 symbols indicate a normal NEC frame
+        if (nec_parse_frame(rx_data->received_symbols)) {
+            ESP_LOGI(TAG, "Received Address=%04X, Command=%04X", s_nec_code_address, s_nec_code_command);
+        }
+    } 
+    else if (num_symbols == 2) {  // 2 symbols indicate a repeat frame
+        ESP_LOGI(TAG, "Ignoring Repeat Frames");
+    } 
+    else {
+        ESP_LOGI(TAG, "Incorrect number of symbols received! num_symbols = %d", num_symbols);
+    }
+}
 
 /**
  * @brief Ensure the signal duration is within the NEC protocol with a small error margin

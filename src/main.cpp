@@ -1,35 +1,29 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "IRReceiver.h"
-#include "IRTransmitter.h"
+#include "LazerBlaster.h"
 #include "esp_log.h"
 
 #define TX_PIN GPIO_NUM_17 
 #define RX_PIN GPIO_NUM_18
 #define IR_RESOLUTION_HZ 1000000
 
-#define RED_TEAM_COMMAND 0x01
-#define BLUE_TEAM_COMMAND 0x02
+#define RED_TEAM_ADDR 0x01
+#define BLUE_TEAM_ADDR 0x02
+
+#define PLAYER1_ADDR 0x01
+#define PLAYER2_ADDR 0x02
 
 extern "C" void app_main(void) {
-    // Create a Receiver
-    IRReceiver receiver(RX_PIN, IR_RESOLUTION_HZ);
-    ESP_LOGI("app_main", "Receiver initialized");
+    // Create a Lazer Blaster
+    LazerBlaster player1(RED_TEAM_ADDR, PLAYER2_ADDR, 5);
 
-    // Create a Transmitter
-    IRTransmitter transmitter(TX_PIN, IR_RESOLUTION_HZ);
-    ESP_LOGI("app_main", "Transmitter initialized");
-
-    while(true){
-
-        ESP_LOGI("app_main", "Waiting for signal");
-        receiver.startReceiving();
-        ESP_LOGI("app_main", "Transmitting signal");
-        transmitter.transmit(0x00, RED_TEAM_COMMAND);
-
-        // Add a delay to prevent rapid transmissions
-        vTaskDelay(pdMS_TO_TICKS(1000));
+    // Have a delay so things aren't so speedy
+    while(true) {
+        // player1.fire();
+        vTaskDelay(500);
     }
+    
+    ESP_LOGI("main", "Program Terminated");
 }
 
