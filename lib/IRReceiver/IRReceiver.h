@@ -9,12 +9,12 @@
 class IRReceiver {
 public:
     IRReceiver(gpio_num_t rx_pin, uint32_t resolution_hz);
-    IRReceiver(gpio_num_t rx_pin, uint32_t resolution_hz, std::function<void(uint16_t, uint16_t)> callback);
+    IRReceiver(gpio_num_t rx_pin, uint32_t resolution_hz, std::function<bool(uint16_t, uint16_t)> callback);
     ~IRReceiver();
     
     void startReceiving();
 private:
-    static std::function<void(uint16_t, uint16_t)> rx_done_blaster_cb;
+    static std::function<bool(uint16_t, uint16_t)> rx_done_blaster_cb;
     static uint16_t s_nec_code_address;
     static uint16_t s_nec_code_command;
 
@@ -30,7 +30,6 @@ private:
     bool nec_check_in_range(uint32_t signal_duration, uint32_t spec_duration);
     bool nec_parse_logic0(rmt_symbol_word_t *rmt_nec_symbols);
     bool nec_parse_logic1(rmt_symbol_word_t *rmt_nec_symbols);
-    bool addressCommandHandler(uint16_t address, uint16_t command);
     void processReceivedData(const rmt_rx_done_event_data_t* rx_data);
 
 
