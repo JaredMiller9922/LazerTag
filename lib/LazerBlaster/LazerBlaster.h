@@ -15,7 +15,8 @@ public:
 
     void fire();
 private:
-    void onCommandReceived(uint16_t command, uint16_t address);
+    bool onCommandReceived(uint16_t address, uint16_t command);
+    void deathSequence();
     static void startReceiverTask(void* pvParameters);
     void pariWithVest();
     uint8_t teamAddress;

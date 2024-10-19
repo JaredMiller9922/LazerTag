@@ -2,8 +2,8 @@
 #include "esp_log.h"
 #include <functional>
 
-#define IR_NEC_DECODE_MARGIN 200
 #define TAG "IRReceiver"
+#define IR_NEC_DECODE_MARGIN 200
 
 #define NEC_LEADING_CODE_DURATION_0  9000
 #define NEC_LEADING_CODE_DURATION_1  4500
@@ -22,7 +22,7 @@
 // This should one hundred percent be fixed
 uint16_t IRReceiver::s_nec_code_address = 0; // Initialize as needed
 uint16_t IRReceiver::s_nec_code_command = 0; // Initialize as needed
-std::function<void(uint16_t, uint16_t)> IRReceiver::rx_done_blaster_cb = nullptr;
+std::function<bool(uint16_t, uint16_t)> IRReceiver::rx_done_blaster_cb = nullptr;
 
 
 /**
@@ -35,7 +35,7 @@ IRReceiver::IRReceiver(gpio_num_t rx_pin, uint32_t resolution_hz) {
 /**
  * @brief Constructor for the IRReceiver that takes in a callback
  */
-IRReceiver::IRReceiver(gpio_num_t rx_pin, uint32_t resolution_hz, std::function<void(uint16_t, uint16_t)> callbackArg = nullptr) {
+IRReceiver::IRReceiver(gpio_num_t rx_pin, uint32_t resolution_hz, std::function<bool(uint16_t, uint16_t)> callbackArg = nullptr) {
     rx_done_blaster_cb = callbackArg;
     setupRMT(rx_pin, resolution_hz);
 }
@@ -181,24 +181,14 @@ bool IRReceiver::nec_parse_frame(rmt_symbol_word_t *rmt_nec_symbols) {
     s_nec_code_command = command;
     ESP_LOGI(TAG, "Size of address at the end of nec_parse_frame: %d bytes", sizeof(s_nec_code_address));
     ESP_LOGI(TAG, "Size of command at the end of nec_parse_frame: %d bytes", sizeof(s_nec_code_command));
-    return addressCommandHandler(address, command);
-}
 
-bool IRReceiver::addressCommandHandler(uint16_t address, uint16_t command){
-    // This came from a red teams gun
-    if (command == RED_TEAM_COMMAND){
-        ESP_LOGI(TAG, "Red Team IR Sent");
-        
-    }
-    else if (command == BLUE_TEAM_COMMAND){
-        ESP_LOGI(TAG, "Blue Team IR Sent");
-    }
-    else {
-        ESP_LOGI(TAG, "Unrecognized command");
-    }
+    // If a callback has been registered then call it
+    if (rx_done_blaster_cb != nullptr) {
+        return rx_done_blaster_cb(address, command);
 
-    // Return true because they're weren't any issues
-    return true;
+    }
+    ESP_LOGI(TAG, "No callback function registered");
+    return false;
 }
 
 /**
