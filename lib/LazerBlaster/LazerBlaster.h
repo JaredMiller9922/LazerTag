@@ -17,6 +17,7 @@ public:
 private:
     void onCommandReceived(uint16_t command, uint16_t address);
     static void startReceiverTask(void* pvParameters);
+    void pariWithVest();
     uint8_t teamAddress;
     uint8_t playerAddress;
     int health;
