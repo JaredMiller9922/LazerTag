@@ -13,8 +13,6 @@
 #include "driver/gpio.h"
 
 // Define pins and other constants
-#define BUTTON_PIN 48 // GPIO for the button
-#define LED_PIN 38    // GPIO for the LED
 #define ESPNOW_TAG "ESP-NOW"
 
 // Declare shared variables
@@ -29,6 +27,10 @@ typedef struct
     char msg[32];
 } espnow_data_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Function declarations
 void espnow_recv_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len);
 void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status);
@@ -38,6 +40,9 @@ void get_own_mac_address(uint8_t *mac);
 void send_message(const char *message);
 void setupESPnow();
 void send_pairing_message();
-void configure_gpio();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // ESPNOW_COMMON_H

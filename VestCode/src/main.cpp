@@ -20,13 +20,14 @@
 
 extern "C" void app_main(void) {
     // Create a Lazer Blaster
-    LazerBlaster player1(RED_TEAM_ADDR, PLAYER1_ADDR, 5);
+    LazerBlaster player1(BLUE_TEAM_ADDR, PLAYER1_ADDR, 5);
     // LazerBlaster player2(BLUE_TEAM_ADDR, PLAYER2_ADDR, 5);
 
     GPIOHelper::initializePinButton(TRIGGER_PIN);
     ESP_LOGI(TAG, "Player: %04X Team: %04X", player1.getPlayerAddr(), player1.getTeamAddr());
     // ESP_LOGI(TAG, "Player: %04X Team: %04X", player2.getPlayerAddr(), player2.getTeamAddr());
 
+    
     // Infinite Program Logic
     while(true) {
         // Fire if the button has been pressed

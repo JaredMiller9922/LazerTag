@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "IRReceiver.h"
 #include "IRTransmitter.h"
+#include "ESPnow.h"
 
 class LazerBlaster {
 public: 
@@ -14,11 +15,12 @@ public:
     int takeDamage(int damage);
 
     void fire();
+    void pairWithVest();
+    void sendMacAddressIR();
 private:
     bool onCommandReceived(uint16_t address, uint16_t command);
     void deathSequence();
     static void startReceiverTask(void* pvParameters);
-    void pariWithVest();
     uint8_t teamAddress;
     uint8_t playerAddress;
     int health;

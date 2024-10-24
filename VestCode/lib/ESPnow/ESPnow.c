@@ -18,15 +18,14 @@
 
 // Paring in this state the gun will send out its ir encoded mac, and also await to recieve data through ir that contains its own mac along with a vest mac then init espnow
 bool paring = true;
+bool receivedGunAddress = false;
 // Define your own MAC address array
 uint8_t own_mac[6] = {0};
 
 // Define the peer MAC address (this will be the other mac address out of the gun vest pare)
 // uint8_t gun_mac[6] = {0x24, 0x58, 0x7c, 0xd6, 0xc1, 0x44}; // black
+uint8_t gun_mac[6]; // gun red team
 // const uint8_t peer_mac[6] = {0x24, 0x58, 0x7c, 0xd6, 0xbd, 0x14}; // white
-uint8_t vest_mac[6] = {0}; // Stores the MAC address of the vest after pairing
-
-
 
 // Data structure to hold the message to send
 typedef struct
@@ -38,33 +37,8 @@ typedef struct
 void espnow_recv_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len)
 {
     ESP_LOGI(ESPNOW_TAG, "Received message from: " MACSTR, MAC2STR(info->src_addr));
-    ESP_LOGI(ESPNOW_TAG, "Received data: %.*s", len, data);
-
-    // Check if the message is a pairing message from the vest
-    if (strncmp((const char *)data, "Vest Ready", len) == 0 && paring)
-    {
-         // Store the vest's MAC address from the received info
-        memcpy(vest_mac, info->src_addr, ESP_NOW_ETH_ALEN);
-
-        // Add the vest as a peer using the received MAC address
-        esp_now_peer_info_t peer_info = {};
-        memcpy(peer_info.peer_addr, vest_mac, ESP_NOW_ETH_ALEN);
-        peer_info.channel = 0; // Use the current channel
-        peer_info.encrypt = false;
-
-        // Add the peer
-        if (esp_now_add_peer(&peer_info) == ESP_OK)
-        {
-            ESP_LOGI(ESPNOW_TAG, "Vest paired successfully: " MACSTR, MAC2STR(info->src_addr));
-            paring = false; // Update the pairing state
-        }
-        else
-        {
-            ESP_LOGE(ESPNOW_TAG, "Failed to pair with vest");
-        }
-    }
+    ESP_LOGI(ESPNOW_TAG, "Received data: %.*s", len, data);    
 }
-
 
 // Callback function to handle the status of sending data
 void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status)
@@ -92,6 +66,16 @@ void espnow_init()
     // Register send and receive callback functions
     ESP_ERROR_CHECK(esp_now_register_recv_cb(espnow_recv_cb));
     ESP_ERROR_CHECK(esp_now_register_send_cb(espnow_send_cb));
+
+    // Configure the peer device
+    esp_now_peer_info_t peer_info = {};
+    memcpy(peer_info.peer_addr, gun_mac, 6);
+    peer_info.channel = 0; // Set channel to 0 (use the current channel)
+    peer_info.encrypt = false;
+
+    // Add peer
+    ESP_ERROR_CHECK(esp_now_add_peer(&peer_info));
+    ESP_LOGI(ESPNOW_TAG, "Peer added: " MACSTR, MAC2STR(gun_mac));
 }
 
 void get_own_mac_address(uint8_t *mac)
@@ -112,19 +96,12 @@ void get_own_mac_address(uint8_t *mac)
 // The main send function
 void send_message(const char *message)
 {
-    // Check if the vest's MAC address has been set (not all zeros)
-    if (memcmp(vest_mac, "\0\0\0\0\0\0", ESP_NOW_ETH_ALEN) == 0)
-    {
-        ESP_LOGW(ESPNOW_TAG, "Cannot send message, vest not paired yet.");
-        return;
-    }
-
     espnow_data_t data;
     memset(&data, 0, sizeof(data));                      // Clear the data structure
     snprintf(data.msg, sizeof(data.msg), "%s", message); // Copy the message to the data structure
 
     // Send the message to the peer MAC address
-    esp_err_t result = esp_now_send(vest_mac, (uint8_t *)&data, sizeof(data));
+    esp_err_t result = esp_now_send(gun_mac, (uint8_t *)&data, sizeof(data));
 
     if (result == ESP_OK)
     {
@@ -136,6 +113,19 @@ void send_message(const char *message)
     }
 }
 
+void send_pairing_message() {
+    espnow_data_t data;
+    memset(&data, 0, sizeof(data));
+    snprintf(data.msg, sizeof(data.msg), "Vest Ready");
+
+    esp_err_t result = esp_now_send(gun_mac, (uint8_t *)&data, sizeof(data));
+    if (result == ESP_OK) {
+        ESP_LOGI(ESPNOW_TAG, "Pairing message sent: %s", data.msg);
+        paring = false;
+    } else {
+        ESP_LOGE(ESPNOW_TAG, "Failed to send pairing message, error code: %d", result);
+    }
+}
 
 void setupESPnow()
 {
@@ -151,17 +141,8 @@ void setupESPnow()
     // Initialize Wi-Fi and ESP-NOW
     wifi_init();
     espnow_init();
+    send_pairing_message();
 }
 
-void configure_gpio()
-{
-    // Configure the LED pin as an output
-    esp_rom_gpio_pad_select_gpio(LED_PIN);
-    gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
-    gpio_set_level(LED_PIN, 0);
 
-    // Configure the button pin as an input with a pull-up resistor
-    esp_rom_gpio_pad_select_gpio(BUTTON_PIN);
-    gpio_set_direction(BUTTON_PIN, GPIO_MODE_INPUT);
-    gpio_set_pull_mode(BUTTON_PIN, GPIO_PULLUP_ONLY); // Enable internal pull-up resistor
-}
+
