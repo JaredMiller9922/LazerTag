@@ -25,6 +25,9 @@ uint8_t own_mac[6] = {0};
 // uint8_t gun_mac[6] = {0x24, 0x58, 0x7c, 0xd6, 0xc1, 0x44}; // black
 // const uint8_t peer_mac[6] = {0x24, 0x58, 0x7c, 0xd6, 0xbd, 0x14}; // white
 uint8_t vest_mac[6] = {0}; // Stores the MAC address of the vest after pairing
+uint8_t lifeSetup = 0;
+uint8_t teamSetup = 0;
+
 
 
 
@@ -61,6 +64,23 @@ void espnow_recv_cb(const esp_now_recv_info_t *info, const uint8_t *data, int le
         else
         {
             ESP_LOGE(ESPNOW_TAG, "Failed to pair with vest");
+        }
+    }
+    // Check if the message is a setup message with life and team values
+    else if (strncmp((const char *)data, "Setup", 5) == 0)
+    {
+        int receivedTeam, receivedLife;
+
+        // Parse team and life
+        if (sscanf((const char *)data, "Setup %d %d", &receivedTeam, &receivedLife) == 2)
+        {
+            teamSetup = (uint8_t)receivedTeam;
+            lifeSetup = (uint8_t)receivedLife;
+            ESP_LOGI(ESPNOW_TAG, "Setup received - Team: %d, Life: %d", teamSetup, lifeSetup);
+        }
+        else
+        {
+            ESP_LOGE(ESPNOW_TAG, "Failed to parse setup message");
         }
     }
 }
@@ -152,4 +172,12 @@ void setupESPnow()
     espnow_init();
     get_own_mac_address(own_mac);
     ESP_LOGI(ESPNOW_TAG, "Device MAC Address: " MACSTR, MAC2STR(own_mac));
+}
+
+uint8_t getLife(){
+    return lifeSetup;
+}
+
+uint8_t getTeam(){
+    return teamSetup;
 }

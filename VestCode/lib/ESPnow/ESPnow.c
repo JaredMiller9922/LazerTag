@@ -16,16 +16,14 @@
 
 #define ESPNOW_TAG "ESP-NOW"
 
-// Paring in this state the gun will send out its ir encoded mac, and also await to recieve data through ir that contains its own mac along with a vest mac then init espnow
+// Paring 
+// in this state the gun will send out its ir encoded mac, and also await to recieve data through ir that contains its own mac along with a vest mac then init espnow
 bool paring = true;
-bool receivedGunAddress = false;
+
 // Define your own MAC address array
 uint8_t own_mac[6] = {0};
 
-// Define the peer MAC address (this will be the other mac address out of the gun vest pare)
-// uint8_t gun_mac[6] = {0x24, 0x58, 0x7c, 0xd6, 0xc1, 0x44}; // black
 uint8_t gun_mac[6]; // gun red team
-// const uint8_t peer_mac[6] = {0x24, 0x58, 0x7c, 0xd6, 0xbd, 0x14}; // white
 
 // Data structure to hold the message to send
 typedef struct

@@ -17,7 +17,6 @@
 
 // Declare shared variables
 extern bool paring;
-extern bool receivedGunAddress;
 extern uint8_t own_mac[6];
 extern uint8_t vest_mac[6];
 extern uint8_t gun_mac[6];

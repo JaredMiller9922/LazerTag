@@ -9,7 +9,6 @@
 
 #define TX_PIN GPIO_NUM_17 
 #define RX_PIN GPIO_NUM_18
-#define TRIGGER_PIN GPIO_NUM_36
 #define IR_RESOLUTION_HZ 1000000
 
 #define RED_TEAM_ADDR 0x01
@@ -20,21 +19,20 @@
 
 extern "C" void app_main(void) {
     // Create a Lazer Blaster
-    LazerBlaster player1(BLUE_TEAM_ADDR, PLAYER1_ADDR, 5);
+    LazerBlaster player(BLUE_TEAM_ADDR, PLAYER1_ADDR, 5);
     // LazerBlaster player2(BLUE_TEAM_ADDR, PLAYER2_ADDR, 5);
 
-    GPIOHelper::initializePinButton(TRIGGER_PIN);
-    ESP_LOGI(TAG, "Player: %04X Team: %04X", player1.getPlayerAddr(), player1.getTeamAddr());
+
+    ESP_LOGI(TAG, "Player: %04X Team: %04X", player.getPlayerAddr(), player.getTeamAddr());
     // ESP_LOGI(TAG, "Player: %04X Team: %04X", player2.getPlayerAddr(), player2.getTeamAddr());
 
-    
+    while(player.getParingStatus()){
+        vTaskDelay(10);
+    }
+    player.gameSetUp();
     // Infinite Program Logic
     while(true) {
-        // Fire if the button has been pressed
-        if (gpio_get_level(TRIGGER_PIN) == 0){
-            player1.fire();
-            // player2.fire();
-        }
+
         vTaskDelay(10);
 
     }

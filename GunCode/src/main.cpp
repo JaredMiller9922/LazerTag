@@ -20,11 +20,11 @@
 
 extern "C" void app_main(void) {
     // Create a Lazer Blaster
-    LazerBlaster player1(BLUE_TEAM_ADDR, PLAYER1_ADDR, 5);
+    LazerBlaster player(BLUE_TEAM_ADDR, PLAYER1_ADDR, 5);
     // LazerBlaster player2(BLUE_TEAM_ADDR, PLAYER2_ADDR, 5);
 
     GPIOHelper::initializePinButton(TRIGGER_PIN);
-    ESP_LOGI(TAG, "Player: %04X Team: %04X", player1.getPlayerAddr(), player1.getTeamAddr());
+    ESP_LOGI(TAG, "Player: %04X Team: %04X", player.getPlayerAddr(), player.getTeamAddr());
     // ESP_LOGI(TAG, "Player: %04X Team: %04X", player2.getPlayerAddr(), player2.getTeamAddr());
 
     // Begin paring process
@@ -34,10 +34,21 @@ extern "C" void app_main(void) {
         // if trigger pressed
         if (gpio_get_level(TRIGGER_PIN) == 0){
         // fire(ownMac)
-            player1.sendMacAddressIR();
+            player.sendMacAddressIR();
         }
     }
     ESP_LOGI(TAG, "Gun: pared with vest");
+
+    bool setUpComplete = false;
+    while (!setUpComplete){
+        if (getLife() > 0){
+            player.setLife(getLife());
+            player.setTeam(getTeam());
+            setUpComplete = true;
+        }
+        vTaskDelay(100);
+    }
+    ESP_LOGI(TAG, "Setup Complete");
 
     // Infinite Program Logic
     uint8_t prev_button_state = 1;
@@ -46,7 +57,7 @@ extern "C" void app_main(void) {
         // Fire if the button has been pressed
         if (button_state == 0 && prev_button_state == 1)
         {
-            player1.fire();
+            player.fire();
             // player2.fire();
         }
         prev_button_state = button_state;

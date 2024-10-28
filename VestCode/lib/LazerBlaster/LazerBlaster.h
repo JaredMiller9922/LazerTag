@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "IRReceiver.h"
 #include "IRTransmitter.h"
+#include <string>
 
 class LazerBlaster {
 public: 
@@ -15,6 +16,11 @@ public:
 
     void fire();
     void pairWithGun();
+    void gameSetUp();
+    std::string getTeamColor(uint8_t);
+    void updateLife(uint8_t newLife);
+    void setTeam(uint8_t newteam);
+    bool getParingStatus();
 private:
     bool onCommandReceived(uint16_t address, uint16_t command);
     void deathSequence();

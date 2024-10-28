@@ -5,6 +5,7 @@
 #include "IRReceiver.h"
 #include "IRTransmitter.h"
 #include "ESPnow.h"
+#include <string>
 
 class LazerBlaster {
 public: 
@@ -17,6 +18,11 @@ public:
     void fire();
     void pairWithVest();
     void sendMacAddressIR();
+    std::string getTeamColor(uint8_t);
+    void setTeam(uint8_t newteam);
+    void setLife(uint8_t newLife);
+
+
 private:
     bool onCommandReceived(uint16_t address, uint16_t command);
     void deathSequence();

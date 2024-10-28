@@ -10,6 +10,10 @@
 #define RX_PIN GPIO_NUM_18
 #define IR_RESOLUTION_HZ 1000000
 
+uint8_t life = 1;
+uint8_t teams[6] = {0, 1, 2, 3, 4, 5};
+uint8_t myTeam;
+
 LazerBlaster::LazerBlaster(uint8_t teamAddr, uint8_t playerAddr, int startingHealth) :
     teamAddress(teamAddr), playerAddress(playerAddr), health(startingHealth),
     transmitter(TX_PIN, IR_RESOLUTION_HZ),
@@ -44,6 +48,7 @@ void LazerBlaster::fire()
     transmitter.transmit(address, 0x01); // For now only one gun type
     ESP_LOGI(TAG, "End of Fire Method");
 }
+
 bool LazerBlaster::onCommandReceived(uint16_t address, uint16_t command){
     ESP_LOGI(TAG, "Callback called Address: %04X Command: %04X", address, command);
     // If team is my team do nothing
@@ -87,4 +92,28 @@ void LazerBlaster::sendMacAddressIR() {
         ESP_LOGI(TAG, "MAC address sent through IR for pairing.");
     }
 }
+
+// Method to get the color associated with a team
+std::string LazerBlaster::getTeamColor(uint8_t team) {
+    switch (team) {
+        case 0: return "Red";
+        case 1: return "Green";
+        case 2: return "Blue";
+        case 3: return "Yellow";
+        case 4: return "Orange";
+        default: return "Rouge";
+    }
+}
+
+void LazerBlaster::setLife(uint8_t startLife){
+    life = startLife;
+    ESP_LOGI(TAG, "%d", life);
+}
+
+void LazerBlaster::setTeam(uint8_t team){
+    myTeam = team;
+    ESP_LOGI(TAG, "%d", myTeam);
+
+}
+
 

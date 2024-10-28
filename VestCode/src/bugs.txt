@@ -1,0 +1,2 @@
+if the vest collects data that isn't for paring it breaks
+    what this means, is that if a trigger is sent from a gun that is already pared, it will break it
