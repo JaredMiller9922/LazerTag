@@ -1,2 +1,23 @@
 if the vest collects data that isn't for paring it breaks
     what this means, is that if a trigger is sent from a gun that is already pared, it will break it
+
+
+
+
+
+    pins
+    1 blue
+    2 blue 
+    3 yellow
+    4 green
+    5 black
+    6 red
+    when red is connected to 5v, none light up
+    When yellow is connected to 5v: black grounded lights up red, green grounded lights up green
+    when blue 2 is connected to 5v: red grounded lights up blue
+    when blue 1 is connected to 5v, black grounded turns on red, green grounded turns on green
+    when green is 5v, none light up
+    when black is 5v, none light up 
+
+    4 5 6
+    3 1 2

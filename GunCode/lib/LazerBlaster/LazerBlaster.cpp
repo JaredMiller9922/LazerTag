@@ -3,6 +3,7 @@
 #include "IRTransmitter.h"
 #include "ESPnow.h"
 #include "esp_log.h"
+#include "RGB_LED.h"
 
 #define TAG "LazerBlaster"
 
@@ -10,9 +11,7 @@
 #define RX_PIN GPIO_NUM_18
 #define IR_RESOLUTION_HZ 1000000
 
-uint8_t life = 1;
-uint8_t teams[6] = {0, 1, 2, 3, 4, 5};
-uint8_t myTeam;
+
 
 LazerBlaster::LazerBlaster(uint8_t teamAddr, uint8_t playerAddr, int startingHealth) :
     teamAddress(teamAddr), playerAddress(playerAddr), health(startingHealth),
@@ -20,7 +19,8 @@ LazerBlaster::LazerBlaster(uint8_t teamAddr, uint8_t playerAddr, int startingHea
     // Register the callback so that when things are received our method can be called
     receiver(RX_PIN, IR_RESOLUTION_HZ, [this](uint16_t address, uint16_t command) {
         return onCommandReceived(address, command);
-    })
+    }),
+    rgbLed(GPIO_NUM_3, GPIO_NUM_8, GPIO_NUM_9) 
     {
         xTaskCreate(&LazerBlaster::startReceiverTask, "StartReceivingTask", 4096, this, 5, NULL);
     }
@@ -33,37 +33,47 @@ void LazerBlaster::startReceiverTask(void *pvParameters)
 
 int LazerBlaster::takeDamage(int damage)
 {
-    health -= damage;
-    ESP_LOGI(TAG, "Player: %04X Has Taken Damage, Current Health is: %d", playerAddress, health);
+    health = getLife() - damage;
+    setLife(health);
+
+    ESP_LOGI(TAG, "Player: %04X Has Taken Damage, Current Health is: %d", getTeam(), getLife());
     if (health <= 0) {
         deathSequence();
     }
+
+    char message[50];
+    sprintf(message, "Damage %d", health); // When damage is taken, seend new health
+    send_message(message);
+
     return health;
 }
 
-void LazerBlaster::fire()
+void LazerBlaster::fire(uint8_t gunType)
 {
     // Concatenate the team address with the player address
-    uint16_t address = (teamAddress << 8) | playerAddress;
-    transmitter.transmit(address, 0x01); // For now only one gun type
+    uint16_t address = (getTeam() << 8) | getLife();
+    transmitter.transmit(address, gunType); // For now only one gun type
     ESP_LOGI(TAG, "End of Fire Method");
 }
 
 bool LazerBlaster::onCommandReceived(uint16_t address, uint16_t command){
     ESP_LOGI(TAG, "Callback called Address: %04X Command: %04X", address, command);
+
+    uint16_t testValue = address >> 8;
+    
     // If team is my team do nothing
-    if ((address >> 8) == teamAddress) {
-        ESP_LOGI(TAG, "Lazer Came From My Team: %04X No damage taken", address);
+    if ((address >> 8) == getTeam()) {
+        ESP_LOGI(TAG, "Lazer Came From My Team: %04X No damage taken", address>>8);
     }
     else {
-        ESP_LOGI(TAG, "Lazer Came From Opposite Team: %04X Damage taken", address);
-        takeDamage(1);
+        ESP_LOGI(TAG, "Lazer Came From Opposite Team: %04X Damage taken", address>>8);
+        takeDamage(command);
     }
     return true;
 }
 
 void LazerBlaster::deathSequence(){
-    ESP_LOGI(TAG, "Player %04X has been killed", playerAddress);
+    ESP_LOGI(TAG, "Player %04X has been killed", getTeam());
 }
 
 uint8_t LazerBlaster::getPlayerAddr(){
@@ -93,27 +103,28 @@ void LazerBlaster::sendMacAddressIR() {
     }
 }
 
-// Method to get the color associated with a team
-std::string LazerBlaster::getTeamColor(uint8_t team) {
+void LazerBlaster::setTeamColor(uint8_t team) {
     switch (team) {
-        case 0: return "Red";
-        case 1: return "Green";
-        case 2: return "Blue";
-        case 3: return "Yellow";
-        case 4: return "Orange";
-        default: return "Rouge";
+        case 0:
+            rgbLed.setRed();
+            break;
+        case 1:
+            rgbLed.setGreen();
+            break;
+        case 2:
+            rgbLed.setBlue();
+            break;
+        case 3:
+            rgbLed.setYellow(); // Red + Green
+            break;
+        case 4:
+            rgbLed.setMagenta(); // Red + Blue
+            break;
+        default:
+            rgbLed.setWhite(); // Default to White This is Rouge
+            break;
     }
 }
 
-void LazerBlaster::setLife(uint8_t startLife){
-    life = startLife;
-    ESP_LOGI(TAG, "%d", life);
-}
-
-void LazerBlaster::setTeam(uint8_t team){
-    myTeam = team;
-    ESP_LOGI(TAG, "%d", myTeam);
-
-}
 
 

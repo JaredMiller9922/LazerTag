@@ -41,6 +41,7 @@ void send_message(const char *message);
 void setupESPnow();
 void send_pairing_message();
 uint8_t getLife();
+void setLife(uint8_t newLife);
 uint8_t getTeam();
 
 

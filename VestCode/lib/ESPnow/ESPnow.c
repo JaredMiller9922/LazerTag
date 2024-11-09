@@ -15,6 +15,8 @@
 #define LED_PIN 38    // GPIO for the LED
 
 #define ESPNOW_TAG "ESP-NOW"
+uint8_t currentLife = 0;
+uint8_t team = 0;
 
 // Paring 
 // in this state the gun will send out its ir encoded mac, and also await to recieve data through ir that contains its own mac along with a vest mac then init espnow
@@ -22,7 +24,6 @@ bool paring = true;
 
 // Define your own MAC address array
 uint8_t own_mac[6] = {0};
-
 uint8_t gun_mac[6]; // gun red team
 
 // Data structure to hold the message to send
@@ -35,7 +36,24 @@ typedef struct
 void espnow_recv_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len)
 {
     ESP_LOGI(ESPNOW_TAG, "Received message from: " MACSTR, MAC2STR(info->src_addr));
-    ESP_LOGI(ESPNOW_TAG, "Received data: %.*s", len, data);    
+    ESP_LOGI(ESPNOW_TAG, "Received data: %.*s", len, data);
+    
+    // Check if the message is a damage update with new health value
+    if (strncmp((const char *)data, "Damage", 6) == 0)
+    {
+        int newHealth;
+
+        // Parse the new health from the Damage message
+        if (sscanf((const char *)data, "Damage %d", &newHealth) == 1)
+        {
+            currentLife = (uint8_t)newHealth;
+            ESP_LOGI(ESPNOW_TAG, "Damage received - New Health: %d", currentLife);
+        }
+        else
+        {
+            ESP_LOGE(ESPNOW_TAG, "Failed to parse damage message");
+        }
+    }
 }
 
 // Callback function to handle the status of sending data
@@ -142,5 +160,18 @@ void setupESPnow()
     send_pairing_message();
 }
 
+uint8_t getLife(){
+    return currentLife;
+}
 
+void setLife(uint8_t newLife){
+    currentLife = newLife;
+}
 
+uint8_t getTeam(){
+    return team;
+}
+
+void setTeam(uint8_t newTeam){
+    team = newTeam;
+}

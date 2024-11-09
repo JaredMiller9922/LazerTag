@@ -40,6 +40,11 @@ void get_own_mac_address(uint8_t *mac);
 void send_message(const char *message);
 void setupESPnow();
 void send_pairing_message();
+uint8_t getLife();
+uint8_t getTeam();
+void setLife(uint8_t newLife);
+void setTeam(uint8_t newTeam);
+
 
 #ifdef __cplusplus
 }

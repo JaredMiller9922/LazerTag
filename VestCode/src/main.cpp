@@ -30,12 +30,15 @@ extern "C" void app_main(void) {
         vTaskDelay(10);
     }
     player.gameSetUp();
+
     // Infinite Program Logic
     while(true) {
 
         vTaskDelay(10);
 
     }
+
+
     
     ESP_LOGI("main", "Program Terminated");
 }

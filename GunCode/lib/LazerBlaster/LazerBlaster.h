@@ -6,6 +6,7 @@
 #include "IRTransmitter.h"
 #include "ESPnow.h"
 #include <string>
+#include "RGB_LED.h"
 
 class LazerBlaster {
 public: 
@@ -15,12 +16,12 @@ public:
     uint8_t getPlayerAddr();
     int takeDamage(int damage);
 
-    void fire();
+    void fire(uint8_t gunType);
     void pairWithVest();
     void sendMacAddressIR();
-    std::string getTeamColor(uint8_t);
+    void setTeamColor(uint8_t team);
     void setTeam(uint8_t newteam);
-    void setLife(uint8_t newLife);
+
 
 
 private:
@@ -32,5 +33,6 @@ private:
     int health;
     IRTransmitter transmitter;
     IRReceiver receiver;
+    RGB_LED rgbLed;
 };
 #endif

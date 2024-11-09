@@ -25,11 +25,10 @@ uint8_t own_mac[6] = {0};
 // uint8_t gun_mac[6] = {0x24, 0x58, 0x7c, 0xd6, 0xc1, 0x44}; // black
 // const uint8_t peer_mac[6] = {0x24, 0x58, 0x7c, 0xd6, 0xbd, 0x14}; // white
 uint8_t vest_mac[6] = {0}; // Stores the MAC address of the vest after pairing
-uint8_t lifeSetup = 0;
-uint8_t teamSetup = 0;
 
-
-
+uint8_t currentLife = 0;
+uint8_t team = 0;
+uint8_t guntype = 1;
 
 // Data structure to hold the message to send
 typedef struct
@@ -74,13 +73,29 @@ void espnow_recv_cb(const esp_now_recv_info_t *info, const uint8_t *data, int le
         // Parse team and life
         if (sscanf((const char *)data, "Setup %d %d", &receivedTeam, &receivedLife) == 2)
         {
-            teamSetup = (uint8_t)receivedTeam;
-            lifeSetup = (uint8_t)receivedLife;
-            ESP_LOGI(ESPNOW_TAG, "Setup received - Team: %d, Life: %d", teamSetup, lifeSetup);
+            team = (uint8_t)receivedTeam;
+            currentLife = (uint8_t)receivedLife;
+            ESP_LOGI(ESPNOW_TAG, "Setup received - Team: %d, Life: %d", team, currentLife);
         }
         else
         {
             ESP_LOGE(ESPNOW_TAG, "Failed to parse setup message");
+        }
+    }
+    // Check if the message is a damage update with new health value
+    else if (strncmp((const char *)data, "Damage", 6) == 0)
+    {
+        int newHealth;
+
+        // Parse the new health from the Damage message
+        if (sscanf((const char *)data, "Damage %d", &newHealth) == 1)
+        {
+            currentLife = (uint8_t)newHealth;
+            ESP_LOGI(ESPNOW_TAG, "Damage received - New Health: %d", currentLife);
+        }
+        else
+        {
+            ESP_LOGE(ESPNOW_TAG, "Failed to parse damage message");
         }
     }
 }
@@ -175,9 +190,17 @@ void setupESPnow()
 }
 
 uint8_t getLife(){
-    return lifeSetup;
+    return currentLife;
+}
+
+void setLife(uint8_t newLife){
+    currentLife = newLife;
 }
 
 uint8_t getTeam(){
-    return teamSetup;
+    return team;
+}
+
+void setTeam(uint8_t newteam){
+    team = newteam;
 }

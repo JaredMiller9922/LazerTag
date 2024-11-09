@@ -5,6 +5,8 @@
 #include "esp_log.h"
 #include <string>
 #include "GPIOHelper.h"
+#include "RGB_LED.h"
+
 
 #define TAG "LazerBlaster"
 
@@ -16,10 +18,12 @@
 #define PLUS_LIFE_BUTTON GPIO_NUM_35
 #define MINUS_LIFE_BUTTON GPIO_NUM_36
 #define CHANGE_TEAM_BUTTON GPIO_NUM_48
+#define MOTOR1 GPIO_NUM_38
+#define MOTOR2 GPIO_NUM_37
 
-uint8_t life = 1;
+
 uint8_t teams[6] = {0, 1, 2, 3, 4, 5};
-uint8_t myTeam;
+
 
 LazerBlaster::LazerBlaster(uint8_t teamAddr, uint8_t playerAddr, int startingHealth) :
     teamAddress(teamAddr), playerAddress(playerAddr), health(startingHealth),
@@ -27,8 +31,13 @@ LazerBlaster::LazerBlaster(uint8_t teamAddr, uint8_t playerAddr, int startingHea
     // Register the callback so that when things are received our method can be called
     receiver(RX_PIN, IR_RESOLUTION_HZ, [this](uint16_t address, uint16_t command) {
         return onCommandReceived(address, command);
-    })
+    }),
+    rgbLed(GPIO_NUM_3, GPIO_NUM_8, GPIO_NUM_17) 
     {
+        // Intitialize Motor Pin
+        GPIOHelper::initializePinAsOutput(MOTOR1);
+        GPIOHelper::initializePinAsOutput(MOTOR2);
+
         xTaskCreate(&LazerBlaster::startReceiverTask, "StartReceivingTask", 4096, this, 5, NULL);
     }
 // Static function to serve as the task entry point
@@ -40,18 +49,27 @@ void LazerBlaster::startReceiverTask(void *pvParameters)
 
 int LazerBlaster::takeDamage(int damage)
 {
-    health -= damage;
-    ESP_LOGI(TAG, "Player: %04X Has Taken Damage, Current Health is: %d", playerAddress, health);
+    health = getLife() - damage;
+    setLife(health);
+    
+    ESP_LOGI(TAG, "Player: %04X Has Taken Damage, Current Health is: %d", getTeam(), getLife());
     if (health <= 0) {
         deathSequence();
     }
+    GPIOHelper::setPinsHighForDuration(MOTOR1, MOTOR2, 1000);
+
+
+    char message[50];
+    sprintf(message, "Damage %d", health); // When damage is taken, seend new health
+    send_message(message);
+
     return health;
 }
 
 void LazerBlaster::fire()
 {
     // Concatenate the team address with the player address
-    uint16_t address = (teamAddress << 8) | playerAddress;
+    uint16_t address = (getTeam() << 8) | getLife();
     transmitter.transmit(address, 0x01); // For now only one gun type
     ESP_LOGI(TAG, "End of Fire Method");
 }
@@ -86,12 +104,14 @@ bool LazerBlaster::onCommandReceived(uint16_t address, uint16_t command){
     } else {
         ESP_LOGI(TAG, "Callback called Address: %04X Command: %04X", address, command);
         // If team is my team do nothing
-        if ((address >> 8) == teamAddress) {
-            ESP_LOGI(TAG, "Lazer Came From My Team: %04X No damage taken", address);
+        if ((address >> 8) == getTeam()) {
+            ESP_LOGI(TAG, "Lazer Came From My Team: %04X No damage taken", address>>8);
         }
         else {
-         ESP_LOGI(TAG, "Lazer Came From Opposite Team: %04X Damage taken", address);
-            takeDamage(1);
+         ESP_LOGI(TAG, "Lazer Came From Opposite Team: %04X Damage taken", address>>8);
+         ESP_LOGI(TAG, "My team is: %04X", getTeam());
+
+            takeDamage(command);
         }
         return true;
     }
@@ -126,12 +146,13 @@ void LazerBlaster::gameSetUp(){
     uint8_t tempTeam = 0;
     uint8_t tempTeamIndex = 0;
     int inactivityTimer = 0;
-    int inactivityTimerLimit = 200; // about 20 seconds with a print statment and a vtaskdelay(10)
+    int inactivityTimerLimit = 100; // about 20 seconds with a print statment and a vtaskdelay(10) 200
 
     GPIOHelper::initializePinButton(MINUS_LIFE_BUTTON);
     GPIOHelper::initializePinButton(CHANGE_TEAM_BUTTON);
     GPIOHelper::initializePinButton(PLUS_LIFE_BUTTON);
 
+    setTeamColor(tempTeam);
     
     while (!setupcomplete){
         // Check if the Plus Life button is pressed
@@ -149,7 +170,7 @@ void LazerBlaster::gameSetUp(){
                 tempLife--;
                 ESP_LOGI(TAG, "Minus Life button pressed. Current health: %d", tempLife);
             } else {
-                ESP_LOGI(TAG, "Current health is already at zero.");
+                ESP_LOGI(TAG, "Current health is already at 1.");
             }
             vTaskDelay(100 / portTICK_PERIOD_MS); // Debounce delay
         }
@@ -161,19 +182,26 @@ void LazerBlaster::gameSetUp(){
             tempTeamIndex = (tempTeamIndex + 1) % 6;
             tempTeam = teams[tempTeamIndex];
             ESP_LOGI(TAG, "Change Team button pressed. New team: %d", tempTeam);
+            setTeamColor(tempTeam);
             vTaskDelay(100 / portTICK_PERIOD_MS); // Debounce delay
         }
 
         inactivityTimer++;
-        vTaskDelay(10);
-        ESP_LOGI(TAG, "Timer: %d", inactivityTimer);
+        // ESP_LOGI(TAG, "Timer: %d", inactivityTimer);
+
         if (inactivityTimer >= inactivityTimerLimit){
             setupcomplete = true;
         }
-    }
 
+        vTaskDelay(5);
+    }
     ESP_LOGI(TAG, "Team: %d", tempTeam);
     ESP_LOGI(TAG, "Life: %d", tempLife);
+
+    setLife(tempLife);
+    setTeam(tempTeam);
+
+    ESP_LOGI("lazerblaster-setup", "life: %d, Team %d", getLife(), getTeam());
 
     char message[50];
     sprintf(message, "Setup %d %d", tempTeam, tempLife); // Format the variables into the string
@@ -184,22 +212,30 @@ void LazerBlaster::gameSetUp(){
     send_message(message);
 }
 
-// Method to get the color associated with a team
-std::string LazerBlaster::getTeamColor(uint8_t team) {
+void LazerBlaster::setTeamColor(uint8_t team) {
     switch (team) {
-        case 0: return "Red";
-        case 1: return "Green";
-        case 2: return "Blue";
-        case 3: return "Yellow";
-        case 4: return "Orange";
-        default: return "Rouge";
+        case 0:
+            rgbLed.setRed();
+            break;
+        case 1:
+            rgbLed.setGreen();
+            break;
+        case 2:
+            rgbLed.setBlue();
+            break;
+        case 3:
+            rgbLed.setYellow(); // Red + Green
+            break;
+        case 4:
+            rgbLed.setMagenta(); // Red + Blue
+            break;
+        default:
+            rgbLed.setWhite(); // Default to White This is Rouge
+            break;
     }
 }
 
-void updateLife(uint8_t newLife){
-    life = newLife;
-}
 
 bool LazerBlaster::getParingStatus(){
-    return(paring);
+    return paring;
 }

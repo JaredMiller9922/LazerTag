@@ -3,6 +3,7 @@
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_log.h"
 
 bool GPIOHelper::initializePinButton(gpio_num_t gpioNum) {
     // Configure the pin as input
@@ -58,4 +59,52 @@ bool GPIOHelper::initializePinLED(gpio_num_t gpioNum) {
         // Initialization failed
         return false;
     }
+}
+
+bool GPIOHelper::initializePinAsOutput(gpio_num_t gpioNum) {
+    gpio_config_t io_conf = {};
+    io_conf.intr_type = GPIO_INTR_DISABLE;     // No interrupt needed
+    io_conf.mode = GPIO_MODE_OUTPUT;           // Set as output mode
+    io_conf.pin_bit_mask = (1ULL << gpioNum);  // Set the bit for the specified GPIO pin
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE; // No pull-down needed
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;     // No pull-up needed
+    esp_err_t ret = gpio_config(&io_conf);
+    gpio_set_level(gpioNum, 0); 
+
+    // Return true if initialization was successful, false otherwise
+    return ret == ESP_OK;
+}
+
+void GPIOHelper::setPinsHighTask(void *param) {
+    gpio_num_t *gpioPins = static_cast<gpio_num_t *>(param);
+    gpio_num_t gpioNum1 = gpioPins[0];
+    gpio_num_t gpioNum2 = gpioPins[1];
+    
+    // Set both pins low
+    gpio_set_level(gpioNum1, 1); // Set first pin high
+    gpio_set_level(gpioNum2, 1); // Set second pin high
+    vTaskDelay(pdMS_TO_TICKS(5000)); // Delay for 1 second (non-blocking)
+
+    // Set both pins back to high
+    gpio_set_level(gpioNum1, 0); // Set first pin low
+    gpio_set_level(gpioNum2, 0); // Set second pin low
+    
+    delete[] gpioPins; // Free allocated memory
+    vTaskDelete(NULL); // Delete this task once done
+}
+
+// Method to start the task for setting two pins high for a duration
+void GPIOHelper::setPinsHighForDuration(gpio_num_t motor1, gpio_num_t motor2, int durationMs) {
+    ESP_LOGI("gpiohelper", "I got here: setPinsHighForDuration called with GPIO pins %d and %d for %d ms", motor1, motor2, durationMs);
+    
+    int level1 = gpio_get_level(motor1);
+    int level2 = gpio_get_level(motor2);
+    ESP_LOGI("gpiohelper", "Current level of motor1 (GPIO %d): %d", motor1, level1);
+    ESP_LOGI("gpiohelper", "Current level of motor2 (GPIO %d): %d", motor2, level2);
+
+    // Allocate an array to hold the GPIO pins
+    gpio_num_t *gpioPins = new gpio_num_t[2]{motor1, motor2};
+    
+    // Pass the array as a task parameter
+    xTaskCreate(setPinsHighTask, "setPinsHighTask", 1024, gpioPins, 1, NULL);
 }
