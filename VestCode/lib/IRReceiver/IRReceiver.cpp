@@ -38,14 +38,15 @@ IRReceiver::IRReceiver(gpio_num_t rx_pin, uint32_t resolution_hz) {
 IRReceiver::IRReceiver(gpio_num_t rx_pin, uint32_t resolution_hz, std::function<bool(uint16_t, uint16_t)> callbackArg = nullptr) {
     rx_done_blaster_cb = callbackArg;
     setupRMT(rx_pin, resolution_hz);
+    ESP_LOGI(TAG, "The constructor right before setupRMT was called");
 }
 
 /**
  * @brief Destructor for the IRReceiver
  */
 IRReceiver::~IRReceiver() {
-    rmt_disable(rx_channel);
-    rmt_del_channel(rx_channel);
+    // rmt_disable(rx_channel);
+    // rmt_del_channel(rx_channel);
 }
 
 /**
@@ -53,6 +54,7 @@ IRReceiver::~IRReceiver() {
  * rx_done_callback when the RX signal is done being received.
  */
 void IRReceiver::setupRMT(gpio_num_t rx_pin, uint32_t resolution_hz) {
+    ESP_LOGI(TAG, "setupRMT started");
     rmt_rx_channel_config_t rx_channel_cfg = {
         .gpio_num = rx_pin,
         .clk_src = RMT_CLK_SRC_DEFAULT,
@@ -75,6 +77,7 @@ void IRReceiver::setupRMT(gpio_num_t rx_pin, uint32_t resolution_hz) {
     };
 
     ESP_ERROR_CHECK(rmt_enable(rx_channel));
+    ESP_LOGI(TAG, "setupRMT complete");
 }
 
 /**
@@ -98,9 +101,16 @@ void IRReceiver::startReceiving() {
 
     ESP_LOGI(TAG, "Start Receiving Method Called");
 
+    // TODO: delete
+    // ESP_ERROR_CHECK(rmt_enable(rx_channel));
+    ESP_LOGI(TAG, "After error check");
+
+
     while (true) {
         // Start receiving RMT symbols
         ESP_ERROR_CHECK(rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config));
+
+        ESP_LOGI(TAG, "inside of while loop");
 
         // Wait for received data
         if (xQueueReceive(receive_queue, &rx_data, portMAX_DELAY) == pdPASS) {

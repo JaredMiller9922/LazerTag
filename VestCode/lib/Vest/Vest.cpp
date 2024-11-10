@@ -1,4 +1,4 @@
-#include "LazerBlaster.h"
+#include "Vest.h"
 #include "IRReceiver.h"
 #include "IRTransmitter.h"
 #include "ESPnow.h"
@@ -24,30 +24,31 @@
 
 uint8_t teams[6] = {0, 1, 2, 3, 4, 5};
 
-
-LazerBlaster::LazerBlaster(uint8_t teamAddr, uint8_t playerAddr, int startingHealth) :
-    teamAddress(teamAddr), playerAddress(playerAddr), health(startingHealth),
-    transmitter(TX_PIN, IR_RESOLUTION_HZ),
-    // Register the callback so that when things are received our method can be called
-    receiver(RX_PIN, IR_RESOLUTION_HZ, [this](uint16_t address, uint16_t command) {
-        return onCommandReceived(address, command);
-    }),
-    rgbLed(GPIO_NUM_3, GPIO_NUM_8, GPIO_NUM_17) 
-    {
-        // Intitialize Motor Pin
-        GPIOHelper::initializePinAsOutput(MOTOR1);
-        GPIOHelper::initializePinAsOutput(MOTOR2);
-
-        xTaskCreate(&LazerBlaster::startReceiverTask, "StartReceivingTask", 4096, this, 5, NULL);
-    }
-// Static function to serve as the task entry point
-void LazerBlaster::startReceiverTask(void *pvParameters)
+void Vest::setup() 
 {
-    LazerBlaster *blaster = static_cast<LazerBlaster *>(pvParameters);
-    blaster->receiver.startReceiving();
+    transmitter = IRTransmitter(TX_PIN, IR_RESOLUTION_HZ);
+
+    rgbLed = RGB_LED(GPIO_NUM_3, GPIO_NUM_8, GPIO_NUM_17);
+
+    // Intitialize Motor Pin
+    GPIOHelper::initializePinAsOutput(MOTOR1);
+    GPIOHelper::initializePinAsOutput(MOTOR2);
+
+    // Start receiving on another thread
+    xTaskCreate(&Vest::startReceiverTask, "StartReceivingTask", 4096, NULL, 5, NULL);
 }
 
-int LazerBlaster::takeDamage(int damage)
+// Static function to serve as the task entry point
+void Vest::startReceiverTask(void *pvParameters)
+{   
+    receiver = IRReceiver(RX_PIN, IR_RESOLUTION_HZ, [](uint16_t address, uint16_t command) {
+        return onCommandReceived(address, command);
+    });
+
+    Vest::receiver.startReceiving();
+}
+
+int Vest::takeDamage(int damage)
 {
     health = getLife() - damage;
     setLife(health);
@@ -66,15 +67,9 @@ int LazerBlaster::takeDamage(int damage)
     return health;
 }
 
-void LazerBlaster::fire()
-{
-    // Concatenate the team address with the player address
-    uint16_t address = (getTeam() << 8) | getLife();
-    transmitter.transmit(address, 0x01); // For now only one gun type
-    ESP_LOGI(TAG, "End of Fire Method");
-}
 
-bool LazerBlaster::onCommandReceived(uint16_t address, uint16_t command){
+
+bool Vest::onCommandReceived(uint16_t address, uint16_t command){
     static uint16_t received_mac_parts[3];
     static int partIndex = 0;
 
@@ -117,19 +112,19 @@ bool LazerBlaster::onCommandReceived(uint16_t address, uint16_t command){
     }
 }
 
-void LazerBlaster::deathSequence(){
+void Vest::deathSequence(){
     ESP_LOGI(TAG, "Player %04X has been killed", playerAddress);
 }
 
-uint8_t LazerBlaster::getPlayerAddr(){
+uint8_t Vest::getPlayerAddr(){
     return playerAddress;
 }
 
-uint8_t LazerBlaster::getTeamAddr(){
+uint8_t Vest::getTeamAddr(){
     return teamAddress;
 }
 
-void LazerBlaster::pairWithGun(){
+void Vest::pairWithGun(){
    
     setupESPnow();
     ESP_LOGI(TAG, "recieved gun address");
@@ -140,7 +135,7 @@ void LazerBlaster::pairWithGun(){
     ESP_LOGI(TAG, "vest pared with gun");
 }
 
-void LazerBlaster::gameSetUp(){
+void Vest::gameSetUp(){
     bool setupcomplete = false;
     uint8_t tempLife = 1;
     uint8_t tempTeam = 0;
@@ -212,7 +207,7 @@ void LazerBlaster::gameSetUp(){
     send_message(message);
 }
 
-void LazerBlaster::setTeamColor(uint8_t team) {
+void Vest::setTeamColor(uint8_t team) {
     switch (team) {
         case 0:
             rgbLed.setRed();
@@ -236,6 +231,6 @@ void LazerBlaster::setTeamColor(uint8_t team) {
 }
 
 
-bool LazerBlaster::getParingStatus(){
+bool Vest::getParingStatus(){
     return paring;
 }

@@ -8,6 +8,7 @@
 
 class IRReceiver {
 public:
+    IRReceiver() = default;
     IRReceiver(gpio_num_t rx_pin, uint32_t resolution_hz);
     IRReceiver(gpio_num_t rx_pin, uint32_t resolution_hz, std::function<bool(uint16_t, uint16_t)> callback);
     ~IRReceiver();

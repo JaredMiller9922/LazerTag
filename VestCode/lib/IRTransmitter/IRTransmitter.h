@@ -9,6 +9,7 @@ extern "C" {
 
 class IRTransmitter {
 public:
+    IRTransmitter() = default;
     IRTransmitter(gpio_num_t tx_pin, uint32_t resolution_hz);
     ~IRTransmitter();
 

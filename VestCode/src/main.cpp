@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "LazerBlaster.h"
+#include "Vest.h"
 #include "esp_log.h"
 #include "GPIOHelper.h"
 
@@ -17,19 +17,24 @@
 #define PLAYER1_ADDR 0x01
 #define PLAYER2_ADDR 0x02
 
+// Initialize static variables here to allocate space 
+int Vest::health;
+uint8_t Vest::teamAddress;
+uint8_t Vest::playerAddress;
+IRTransmitter Vest::transmitter;
+IRReceiver Vest::receiver;
+RGB_LED Vest::rgbLed;
+
 extern "C" void app_main(void) {
-    // Create a Lazer Blaster
-    LazerBlaster player(BLUE_TEAM_ADDR, PLAYER1_ADDR, 5);
-    // LazerBlaster player2(BLUE_TEAM_ADDR, PLAYER2_ADDR, 5);
+    Vest::setup();
 
-
-    ESP_LOGI(TAG, "Player: %04X Team: %04X", player.getPlayerAddr(), player.getTeamAddr());
+    ESP_LOGI(TAG, "Player: %04X Team: %04X", Vest::getPlayerAddr(), Vest::getTeamAddr());
     // ESP_LOGI(TAG, "Player: %04X Team: %04X", player2.getPlayerAddr(), player2.getTeamAddr());
 
-    while(player.getParingStatus()){
+    while(Vest::getParingStatus()){
         vTaskDelay(10);
     }
-    player.gameSetUp();
+    Vest::gameSetUp();
 
     // Infinite Program Logic
     while(true) {
@@ -37,9 +42,6 @@ extern "C" void app_main(void) {
         vTaskDelay(10);
 
     }
-
-
-    
     ESP_LOGI("main", "Program Terminated");
 }
 
