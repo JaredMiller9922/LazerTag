@@ -8,7 +8,7 @@
 #include "RGB_LED.h"
 
 
-#define TAG "LazerBlaster"
+#define TAG "Vest"
 
 #define TX_PIN GPIO_NUM_17 
 #define RX_PIN GPIO_NUM_18
@@ -26,9 +26,7 @@ uint8_t teams[6] = {0, 1, 2, 3, 4, 5};
 
 void Vest::setup() 
 {
-    transmitter = IRTransmitter(TX_PIN, IR_RESOLUTION_HZ);
-
-    rgbLed = RGB_LED(GPIO_NUM_3, GPIO_NUM_8, GPIO_NUM_17);
+    rgbLed = RGB_LED(GPIO_NUM_3, GPIO_NUM_8, GPIO_NUM_9);
 
     // Intitialize Motor Pin
     GPIOHelper::initializePinAsOutput(MOTOR1);
@@ -62,7 +60,7 @@ int Vest::takeDamage(int damage)
 
     char message[50];
     sprintf(message, "Damage %d", health); // When damage is taken, seend new health
-    send_message(message);
+    vest_send_message(message);
 
     return health;
 }
@@ -126,7 +124,7 @@ uint8_t Vest::getTeamAddr(){
 
 void Vest::pairWithGun(){
    
-    setupESPnow();
+    vest_setupESPnow();
     ESP_LOGI(TAG, "recieved gun address");
     ESP_LOGI(ESPNOW_TAG, "gun address: " MACSTR, MAC2STR(gun_mac));
     while(paring){
@@ -204,7 +202,7 @@ void Vest::gameSetUp(){
     ESP_LOGI(TAG, "Sending Message: %s", message);
 
     // Send data through espnow
-    send_message(message);
+    vest_send_message(message);
 }
 
 void Vest::setTeamColor(uint8_t team) {
