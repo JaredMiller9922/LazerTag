@@ -21,8 +21,6 @@
 int Vest::health;
 uint8_t Vest::teamAddress;
 uint8_t Vest::playerAddress;
-IRTransmitter Vest::transmitter;
-IRReceiver Vest::receiver;
 RGB_LED Vest::rgbLed;
 
 extern "C" void app_main(void) {

@@ -7,8 +7,6 @@
 #include "GPIOHelper.h"
 #include "RGB_LED.h"
 
-
-
 #define TAG "LazerBlaster"
 
 #define TX_PIN GPIO_NUM_17 
@@ -25,16 +23,13 @@
 int Blaster::health;
 uint8_t Blaster::teamAddress;
 uint8_t Blaster::playerAddress;
-IRTransmitter Blaster::transmitter;
-IRReceiver Blaster::receiver;
 RGB_LED Blaster::rgbLed;
 
 uint8_t teams[6] = {0, 1, 2, 3, 4, 5};
 
 void Blaster::setup() 
 {
-    transmitter = IRTransmitter(TX_PIN, IR_RESOLUTION_HZ);
-    // IRTransmitter::setup(TX_PIN, IR_RESOLUTION_HZ);
+    IRTransmitter::setup(TX_PIN, IR_RESOLUTION_HZ);
 
     rgbLed = RGB_LED(GPIO_NUM_3, GPIO_NUM_8, GPIO_NUM_9);
 
@@ -53,7 +48,7 @@ void Blaster::startReceiverTask(void *pvParameters)
         return onCommandReceived(address, command);
     });
 
-    Blaster::receiver.startReceiving();
+    IRReceiver::startReceiving();
 }
 
 int Blaster::takeDamage(int damage)
@@ -79,7 +74,7 @@ void Blaster::fire(uint8_t gunType)
 {
     // Concatenate the team address with the player address
     uint16_t address = (getTeam() << 8) | getLife();
-    transmitter.transmit(address, gunType); // For now only one gun type
+    IRTransmitter::transmit(address, gunType); // For now only one gun type
     ESP_LOGI(TAG, "End of Fire Method");
 }
 
@@ -126,11 +121,11 @@ void Blaster::sendMacAddressIR() {
 
 
         // Sends the MAC address parts over IR
-        transmitter.transmit(part1, 0x01);
+        IRTransmitter::transmit(part1, 0x01);
         vTaskDelay(pdMS_TO_TICKS(100));
-        transmitter.transmit(part2, 0x01);
+        IRTransmitter::transmit(part2, 0x01);
         vTaskDelay(pdMS_TO_TICKS(100));
-        transmitter.transmit(part3, 0x01);
+        IRTransmitter::transmit(part3, 0x01);
 
         ESP_LOGI(TAG, "MAC address sent through IR for pairing.");
     }

@@ -43,7 +43,7 @@ void Vest::startReceiverTask(void *pvParameters)
         return onCommandReceived(address, command);
     });
 
-    Vest::receiver.startReceiving();
+    IRReceiver::startReceiving();
 }
 
 int Vest::takeDamage(int damage)

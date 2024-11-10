@@ -9,18 +9,17 @@ extern "C" {
 
 class IRTransmitter {
 public:
-    IRTransmitter() = default;
-    IRTransmitter(gpio_num_t tx_pin, uint32_t resolution_hz);
-    ~IRTransmitter();
+    IRTransmitter() = delete;
 
-    void transmit(uint16_t address, uint16_t command);
+    static void setup(gpio_num_t tx_pin, uint32_t resolution_hz);
+    static void transmit(uint16_t address, uint16_t command);
 
 private:
-    rmt_channel_handle_t tx_channel;
-    rmt_encoder_handle_t nec_encoder;
-    rmt_transmit_config_t transmit_config;
+    static rmt_channel_handle_t tx_channel;
+    static rmt_encoder_handle_t nec_encoder;
+    static rmt_transmit_config_t transmit_config;
 
-    void setupRMT(gpio_num_t tx_pin, uint32_t resolution_hz);
+    static void setupRMT(gpio_num_t tx_pin, uint32_t resolution_hz);
 };
 
 #endif

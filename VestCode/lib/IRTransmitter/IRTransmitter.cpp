@@ -3,20 +3,12 @@
 
 #define TAG "IRTransmitter"
 
-/**
- * @brief Constructor for creating an IRTransmitter
- */
-IRTransmitter::IRTransmitter(gpio_num_t tx_pin, uint32_t resolution_hz) {
-    setupRMT(tx_pin, resolution_hz);
-}
+rmt_channel_handle_t IRTransmitter::tx_channel;
+rmt_encoder_handle_t IRTransmitter::nec_encoder;
+rmt_transmit_config_t IRTransmitter::transmit_config;
 
-/**
- * @brief Constructor for creating an IRTransmitter
- */
-IRTransmitter::~IRTransmitter() {
-    // rmt_disable(tx_channel);
-    // rmt_del_encoder(nec_encoder);
-    // rmt_del_channel(tx_channel);
+void IRTransmitter::setup(gpio_num_t tx_pin, uint32_t resolution_hz){
+    setupRMT(tx_pin, resolution_hz);
 }
 
 /**

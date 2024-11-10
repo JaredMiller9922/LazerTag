@@ -17,8 +17,6 @@ public:
     static int health;
     static uint8_t teamAddress;
     static uint8_t playerAddress;
-    static IRTransmitter transmitter;
-    static IRReceiver receiver;
     static RGB_LED rgbLed;
 
     static void setup();
