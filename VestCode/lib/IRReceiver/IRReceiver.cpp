@@ -1,5 +1,6 @@
 #include "IRReceiver.h"
 #include "esp_log.h"
+#include "driver/gpio.h"
 #include <functional>
 
 #define TAG "IRReceiver"
@@ -17,6 +18,11 @@
 #define RED_TEAM_COMMAND 0x01
 #define BLUE_TEAM_COMMAND 0x02
 
+// Static variables must be defined for the linker
+rmt_symbol_word_t IRReceiver::raw_symbols[64];  // 64 symbols to hold the received data
+rmt_channel_handle_t IRReceiver::rx_channel;
+QueueHandle_t IRReceiver::receive_queue;
+rmt_receive_config_t IRReceiver::receive_config;
 
 // TODO: These are here because of some weird behavior with having the callback static
 // This should one hundred percent be fixed
@@ -25,28 +31,9 @@ uint16_t IRReceiver::s_nec_code_command = 0; // Initialize as needed
 std::function<bool(uint16_t, uint16_t)> IRReceiver::rx_done_blaster_cb = nullptr;
 
 
-/**
- * @brief Constructor for the IRReceiver
- */
-IRReceiver::IRReceiver(gpio_num_t rx_pin, uint32_t resolution_hz) {
-    setupRMT(rx_pin, resolution_hz);
-}
-
-/**
- * @brief Constructor for the IRReceiver that takes in a callback
- */
-IRReceiver::IRReceiver(gpio_num_t rx_pin, uint32_t resolution_hz, std::function<bool(uint16_t, uint16_t)> callbackArg = nullptr) {
+void IRReceiver::setup(gpio_num_t rx_pin, uint32_t resolution_hz, std::function<bool(uint16_t, uint16_t)> callbackArg){
     rx_done_blaster_cb = callbackArg;
     setupRMT(rx_pin, resolution_hz);
-    ESP_LOGI(TAG, "The constructor right before setupRMT was called");
-}
-
-/**
- * @brief Destructor for the IRReceiver
- */
-IRReceiver::~IRReceiver() {
-    // rmt_disable(rx_channel);
-    // rmt_del_channel(rx_channel);
 }
 
 /**

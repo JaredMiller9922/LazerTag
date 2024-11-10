@@ -41,7 +41,7 @@ void Vest::setup()
 // Static function to serve as the task entry point
 void Vest::startReceiverTask(void *pvParameters)
 {   
-    receiver = IRReceiver(RX_PIN, IR_RESOLUTION_HZ, [](uint16_t address, uint16_t command) {
+    IRReceiver::setup(RX_PIN, IR_RESOLUTION_HZ, [](uint16_t address, uint16_t command) {
         return onCommandReceived(address, command);
     });
 
