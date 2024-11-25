@@ -126,12 +126,6 @@ void indicateFireReady(uint16_t fireRate) {
 
     gpio_set_level(READY_TO_FIRE_4, 1);
     vTaskDelay(interval / portTICK_PERIOD_MS);
-
-    // After the intervals, turn off all LEDs and set the firing indicator
-    //gpio_set_level(READY_TO_FIRE_1, 0);
-    //gpio_set_level(READY_TO_FIRE_2, 0);
-    //gpio_set_level(READY_TO_FIRE_3, 0);
-    //gpio_set_level(READY_TO_FIRE_4, 0);
 }
 
 

@@ -26,7 +26,7 @@ uint8_t teams[6] = {0, 1, 2, 3, 4, 5};
 
 void Vest::setup() 
 {
-    rgbLed = RGB_LED(GPIO_NUM_3, GPIO_NUM_8, GPIO_NUM_9);
+    rgbLed = RGB_LED(GPIO_NUM_9, GPIO_NUM_3, GPIO_NUM_8);
 
     // Intitialize Motor Pin
     GPIOHelper::initializePinAsOutput(MOTOR1);

@@ -31,7 +31,9 @@ void Blaster::setup()
 {
     IRTransmitter::setup(TX_PIN, IR_RESOLUTION_HZ);
 
-    rgbLed = RGB_LED(GPIO_NUM_3, GPIO_NUM_8, GPIO_NUM_9);
+    
+    rgbLed = RGB_LED(GPIO_NUM_9, GPIO_NUM_3, GPIO_NUM_8);
+
 
     // Intitialize Motor Pin
     GPIOHelper::initializePinAsOutput(MOTOR1);
