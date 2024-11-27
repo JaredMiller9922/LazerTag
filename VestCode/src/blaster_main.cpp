@@ -31,14 +31,14 @@ extern "C" void app_main(void) {
     // Begin paring process
     blaster_setupESPnow();
     while(paring){
-        ESP_LOGI(TAG, "Pairing status: %d", paring);
+        //ESP_LOGI(TAG, "Pairing status: %d", paring);
         vTaskDelay(10);
         // if trigger pressed
         if (gpio_get_level(TRIGGER_PIN) == 0){
         // fire(ownMac)
         Blaster::sendMacAddressIR();
 
-        }
+        } 
     }
     ESP_LOGI(TAG, "Gun: pared with vest");
 

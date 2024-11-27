@@ -17,13 +17,12 @@
 #define PLUS_LIFE_BUTTON GPIO_NUM_35
 #define MINUS_LIFE_BUTTON GPIO_NUM_36
 #define CHANGE_TEAM_BUTTON GPIO_NUM_48
-#define MOTOR1 GPIO_NUM_38
-#define MOTOR2 GPIO_NUM_37
+#define MOTOR1 GPIO_NUM_12
 
 int Blaster::health;
 uint8_t Blaster::teamAddress;
 uint8_t Blaster::playerAddress;
-RGB_LED Blaster::rgbLed;
+RGB_LED Blaster::rgbLed = RGB_LED(GPIO_NUM_9, GPIO_NUM_3, GPIO_NUM_8);
 
 uint8_t teams[6] = {0, 1, 2, 3, 4, 5};
 
@@ -35,7 +34,6 @@ void Blaster::setup()
 
     // Intitialize Motor Pin
     GPIOHelper::initializePinAsOutput(MOTOR1);
-    GPIOHelper::initializePinAsOutput(MOTOR2);
 
     // Start receiving on another thread
     xTaskCreate(&Blaster::startReceiverTask, "StartReceivingTask", 4096, NULL, 5, NULL);
@@ -52,15 +50,23 @@ void Blaster::startReceiverTask(void *pvParameters)
 
 int Blaster::takeDamage(int damage)
 {
+    for(int x = 0; x < 19; x++){
+        ESP_LOGI(TAG, "player tooked %d damage", damage);
+    }
     health = getLife() - damage;
+    if (health < 0) {
+        health = 0;
+    }
     setLife(health);
 
+    GPIOHelper::setPinsHighForDuration(MOTOR1, damage * 500);
     ESP_LOGI(TAG, "Player: %04X Has Taken Damage, Current Health is: %d", getTeam(), getLife());
     if (health <= 0)
     {
+        // Send death message to vest 
         deathSequence();
     }
-    GPIOHelper::setPinsHighForDuration(MOTOR1, MOTOR2, 1000);
+    GPIOHelper::setPinsHighForDuration(MOTOR1, 1000);
 
     char message[50];
     sprintf(message, "Damage %d", health); // When damage is taken, seend new health
@@ -86,7 +92,7 @@ bool Blaster::onCommandReceived(uint16_t address, uint16_t command)
     {
         ESP_LOGI(TAG, "Lazer Came From My Team: %04X No damage taken", address >> 8);
     }
-    else
+    else if((address) <= 6)
     {
         ESP_LOGI(TAG, "Lazer Came From Opposite Team: %04X Damage taken", address >> 8);
         takeDamage(command);
@@ -96,9 +102,13 @@ bool Blaster::onCommandReceived(uint16_t address, uint16_t command)
 
 void Blaster::deathSequence()
 {
+
+   
     while (true)
     {
-        GPIOHelper::setPinsHighForDuration(MOTOR1, MOTOR2, 10000);
+        ESP_LOGI(TAG, "Player %04X has been killed", playerAddress); 
+    
+        GPIOHelper::setPinsHighForDuration(MOTOR1, 10000);
         ESP_LOGI(TAG, "Player %04X has been killed", playerAddress);
         vTaskDelay(5000);
     }

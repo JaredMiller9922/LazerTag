@@ -7,7 +7,6 @@
 #include "GPIOHelper.h"
 #include "RGB_LED.h"
 
-
 #define TAG "Vest"
 
 #define TX_PIN GPIO_NUM_17 
@@ -19,18 +18,19 @@
 #define MINUS_LIFE_BUTTON GPIO_NUM_36
 #define CHANGE_TEAM_BUTTON GPIO_NUM_48
 #define MOTOR1 GPIO_NUM_38
-#define MOTOR2 GPIO_NUM_37
 
+RGB_LED Vest::rgbLed = RGB_LED(GPIO_NUM_9, GPIO_NUM_3, GPIO_NUM_8);
+RGB_LED Vest::lifeRGBLED = RGB_LED(GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6, true);
+int Vest::startingHealth = 0;
 
 uint8_t teams[6] = {0, 1, 2, 3, 4, 5};
 
 void Vest::setup() 
 {
     rgbLed = RGB_LED(GPIO_NUM_9, GPIO_NUM_3, GPIO_NUM_8);
-
+    lifeRGBLED = RGB_LED(GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6, true);
     // Intitialize Motor Pin
     GPIOHelper::initializePinAsOutput(MOTOR1);
-    GPIOHelper::initializePinAsOutput(MOTOR2);
 
     // Start receiving on another thread
     xTaskCreate(&Vest::startReceiverTask, "StartReceivingTask", 4096, NULL, 5, NULL);
@@ -48,14 +48,22 @@ void Vest::startReceiverTask(void *pvParameters)
 
 int Vest::takeDamage(int damage)
 {
-    health = getLife() - damage;
-    setLife(health);
+    for(int x = 0; x < 19; x++){
+        ESP_LOGI(TAG, "player took %d damage", damage);
     
+    }
+
+    health = getLife() - damage;
+    if (health < 0) {
+        health = 0;
+    }
+    setLife(health);
+    GPIOHelper::setPinsHighForDuration(MOTOR1, damage * 500); 
     ESP_LOGI(TAG, "Player: %04X Has Taken Damage, Current Health is: %d", getTeam(), getLife());
     if (health <= 0) {
         deathSequence();
     }
-    GPIOHelper::setPinsHighForDuration(MOTOR1, MOTOR2, 1000);
+    GPIOHelper::setPinsHighForDuration(MOTOR1, 1000);
 
 
     char message[50];
@@ -100,7 +108,7 @@ bool Vest::onCommandReceived(uint16_t address, uint16_t command){
         if ((address >> 8) == getTeam()) {
             ESP_LOGI(TAG, "Lazer Came From My Team: %04X No damage taken", address>>8);
         }
-        else {
+        else if((address) <= 6) {
          ESP_LOGI(TAG, "Lazer Came From Opposite Team: %04X Damage taken", address>>8);
          ESP_LOGI(TAG, "My team is: %04X", getTeam());
 
@@ -108,6 +116,7 @@ bool Vest::onCommandReceived(uint16_t address, uint16_t command){
         }
         return true;
     }
+    
 }
 
 void Vest::deathSequence(){
@@ -135,7 +144,7 @@ void Vest::pairWithGun(){
 
 void Vest::gameSetUp(){
     bool setupcomplete = false;
-    uint8_t tempLife = 1;
+    uint8_t tempLife = 20;
     uint8_t tempTeam = 0;
     uint8_t tempTeamIndex = 0;
     int inactivityTimer = 0;
@@ -190,7 +199,8 @@ void Vest::gameSetUp(){
     }
     ESP_LOGI(TAG, "Team: %d", tempTeam);
     ESP_LOGI(TAG, "Life: %d", tempLife);
-
+    
+    startingHealth = tempLife;
     setLife(tempLife);
     setTeam(tempTeam);
 
@@ -231,4 +241,26 @@ void Vest::setTeamColor(uint8_t team) {
 
 bool Vest::getParingStatus(){
     return paring;
+}
+
+void Vest::setLifeCountLED(uint8_t curLife) {
+    // Assuming maxLife is defined elsewhere
+    float lifePercentage = (float)curLife / startingHealth;
+
+    if (lifePercentage == 1.0) {
+        lifeRGBLED.setWhite(); // 100% life
+        ESP_LOGI(TAG, "Life Count LED: White (100%% life)");
+    } else if (lifePercentage > 0.75) {
+        lifeRGBLED.setGreen(); // 99% - 75% life
+        ESP_LOGI(TAG, "Life Count LED: Green (75-99%% life)");
+    } else if (lifePercentage > 0.50) {
+        lifeRGBLED.setBlue(); // 75% - 50% life
+        ESP_LOGI(TAG, "Life Count LED: Blue (50-75%% life)");
+    } else if (lifePercentage > 0.25) {
+        lifeRGBLED.setYellow(); // 50% - 25% life
+        ESP_LOGI(TAG, "Life Count LED: Yellow (25-50%% life)");
+    } else {
+        lifeRGBLED.setRed(); // 25% or below
+        ESP_LOGI(TAG, "Life Count LED: Red (<25%% life)");
+    }
 }

@@ -4,6 +4,7 @@
 #include "Vest.h"
 #include "esp_log.h"
 #include "GPIOHelper.h"
+#include "ESPnow.h"
 
 #define TAG "Main"
 
@@ -21,7 +22,7 @@
 int Vest::health;
 uint8_t Vest::teamAddress;
 uint8_t Vest::playerAddress;
-RGB_LED Vest::rgbLed;
+
 
 extern "C" void app_main(void) {
     Vest::setup();
@@ -38,7 +39,7 @@ extern "C" void app_main(void) {
     while(true) {
 
         vTaskDelay(10);
-
+        Vest::setLifeCountLED(getLife());
     }
     ESP_LOGI("main", "Program Terminated");
 }

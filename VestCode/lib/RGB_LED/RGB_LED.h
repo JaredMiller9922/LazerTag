@@ -5,7 +5,8 @@
 
 class RGB_LED {
 public:
-    RGB_LED(gpio_num_t redPin = GPIO_NUM_3, gpio_num_t greenPin = GPIO_NUM_8, gpio_num_t bluePin = GPIO_NUM_9);
+    RGB_LED(gpio_num_t redPin, gpio_num_t greenPin, gpio_num_t bluePin);
+    RGB_LED(gpio_num_t redPin, gpio_num_t greenPin, gpio_num_t bluePin, bool isLifeIndicator);
 
     // Function to set custom RGB values
     void setColor(uint8_t red, uint8_t green, uint8_t blue);

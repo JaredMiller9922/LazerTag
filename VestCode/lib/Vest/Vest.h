@@ -15,9 +15,11 @@ public:
 
     // Instance variables 
     static int health;
+    static int startingHealth;
     static uint8_t teamAddress;
     static uint8_t playerAddress;
     static RGB_LED rgbLed;
+    static RGB_LED lifeRGBLED;
 
     static void setup();
     static uint8_t getTeamAddr();
@@ -28,7 +30,7 @@ public:
     static void gameSetUp();
     static void setTeamColor(uint8_t team);
     static bool getParingStatus();
-
+    static void setLifeCountLED(uint8_t curLife);
 private:
     static bool onCommandReceived(uint16_t address, uint16_t command);
     static void deathSequence();

@@ -10,6 +10,22 @@ RGB_LED::RGB_LED(gpio_num_t redPin, gpio_num_t greenPin, gpio_num_t bluePin)
     initializePin(bluePin);
 }
 
+// Second constructor for special use case
+RGB_LED::RGB_LED(gpio_num_t redPin, gpio_num_t greenPin, gpio_num_t bluePin, bool isLifeIndicator)
+    : redPin(redPin), greenPin(greenPin), bluePin(bluePin)
+{
+    // Initialize each pin as an output
+    initializePin(redPin);
+    initializePin(greenPin);
+    initializePin(bluePin);
+    if (isLifeIndicator == true){
+        setWhite();
+    }
+
+
+    
+}
+
 // Method to initialize a GPIO pin as output
 void RGB_LED::initializePin(gpio_num_t pin) {
     gpio_config_t io_conf = {};

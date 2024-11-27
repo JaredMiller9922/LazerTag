@@ -94,16 +94,14 @@ void GPIOHelper::setPinsHighTask(void *param) {
 }
 
 // Method to start the task for setting two pins high for a duration
-void GPIOHelper::setPinsHighForDuration(gpio_num_t motor1, gpio_num_t motor2, int durationMs) {
-    ESP_LOGI("gpiohelper", "I got here: setPinsHighForDuration called with GPIO pins %d and %d for %d ms", motor1, motor2, durationMs);
+void GPIOHelper::setPinsHighForDuration(gpio_num_t motor1, int durationMs) {
+    ESP_LOGI("gpiohelper", "I got here: setPinsHighForDuration called with GPIO pins %d for %d ms", motor1, durationMs);
     
     int level1 = gpio_get_level(motor1);
-    int level2 = gpio_get_level(motor2);
     ESP_LOGI("gpiohelper", "Current level of motor1 (GPIO %d): %d", motor1, level1);
-    ESP_LOGI("gpiohelper", "Current level of motor2 (GPIO %d): %d", motor2, level2);
 
     // Allocate an array to hold the GPIO pins
-    gpio_num_t *gpioPins = new gpio_num_t[2]{motor1, motor2};
+    gpio_num_t *gpioPins = new gpio_num_t[1]{motor1};
     
     // Pass the array as a task parameter
     xTaskCreate(setPinsHighTask, "setPinsHighTask", 1024, gpioPins, 1, NULL);
