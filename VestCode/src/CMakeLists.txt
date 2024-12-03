@@ -19,4 +19,8 @@ if(PROJECT STREQUAL "blaster2")
   list(FILTER app_sources EXCLUDE REGEX ".*vest_main.cpp")
 endif()
 
+if(PROJECT STREQUAL "blaster3")
+  list(FILTER app_sources EXCLUDE REGEX ".*vest_main.cpp")
+endif()
+
 idf_component_register(SRCS ${app_sources})

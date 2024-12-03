@@ -79,9 +79,14 @@ void Blaster::fire(uint8_t gunType)
 {
     // Concatenate the team address with the player address
     uint16_t address = (getTeam() << 8) | getLife();
-    IRTransmitter::transmit(address, gunType); // For now only one gun type
-    ESP_LOGI(TAG, "End of Fire Method");
+    
+    // Add a tag to the command to indicate damage (this is done to prevent the mac address from registering as damage)
+    uint16_t command = (0x02 << 8) | gunType; // 0x02 indicates this is a damage command
+
+    IRTransmitter::transmit(address, command); // Send damage command
+    ESP_LOGI(TAG, "Fire Method - Address: %04X, Command: %04X", address, command);
 }
+
 
 bool Blaster::onCommandReceived(uint16_t address, uint16_t command)
 {

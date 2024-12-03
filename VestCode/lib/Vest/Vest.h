@@ -31,9 +31,10 @@ public:
     static void setTeamColor(uint8_t team);
     static bool getParingStatus();
     static void setLifeCountLED(uint8_t curLife);
+    static void deathSequence();
+
 private:
     static bool onCommandReceived(uint16_t address, uint16_t command);
-    static void deathSequence();
     static void startReceiverTask(void* pvParameters);
 };
 #endif

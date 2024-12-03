@@ -104,15 +104,18 @@ bool Vest::onCommandReceived(uint16_t address, uint16_t command){
         return true;
     } else {
         ESP_LOGI(TAG, "Callback called Address: %04X Command: %04X", address, command);
-        // If team is my team do nothing
-        if ((address >> 8) == getTeam()) {
-            ESP_LOGI(TAG, "Lazer Came From My Team: %04X No damage taken", address>>8);
-        }
-        else if((address) <= 6) {
-         ESP_LOGI(TAG, "Lazer Came From Opposite Team: %04X Damage taken", address>>8);
-         ESP_LOGI(TAG, "My team is: %04X", getTeam());
-
-            takeDamage(command);
+        // Check if this is a damage command
+        if ((command >> 8) == 0x02) {
+            // If the team matches, ignore the damage
+            if ((address >> 8) == getTeam()) {
+                ESP_LOGI(TAG, "Lazer Came From My Team: %04X, No damage taken", address >> 8);
+            } else {
+                ESP_LOGI(TAG, "Lazer Came From Opposite Team: %04X, Damage taken", address >> 8);
+                takeDamage(command & 0xFF); // Use the lower byte for the gunType
+            }
+        } 
+        else {
+            ESP_LOGI(TAG, "Unknown Command - Address: %04X, Command: %04X", address, command);
         }
         return true;
     }

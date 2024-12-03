@@ -40,6 +40,9 @@ extern "C" void app_main(void) {
 
         vTaskDelay(10);
         Vest::setLifeCountLED(getLife());
+        if(getLife() <= 0){
+            Vest::deathSequence();
+        }
     }
     ESP_LOGI("main", "Program Terminated");
 }
