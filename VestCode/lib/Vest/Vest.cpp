@@ -61,6 +61,7 @@ int Vest::takeDamage(int damage)
     GPIOHelper::setPinsHighForDuration(MOTOR1, damage * 500); 
     ESP_LOGI(TAG, "Player: %04X Has Taken Damage, Current Health is: %d", getTeam(), getLife());
     if (health <= 0) {
+        ESP_LOGI(TAG, "Death Sequence Called");
         deathSequence();
     }
     GPIOHelper::setPinsHighForDuration(MOTOR1, 1000);

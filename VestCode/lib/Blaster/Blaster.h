@@ -29,10 +29,11 @@ public:
     static void gameSetUp();
     static void setTeamColor(uint8_t team);
     static bool getParingStatus();
+    static void deathSequence();
+
 
 private:
     static bool onCommandReceived(uint16_t address, uint16_t command);
-    static void deathSequence();
     static void startReceiverTask(void* pvParameters);
 };
 #endif

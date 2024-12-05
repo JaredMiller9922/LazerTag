@@ -11,6 +11,10 @@ if(PROJECT STREQUAL "vest2")
   list(FILTER app_sources EXCLUDE REGEX ".*blaster_main.cpp")
 endif()
 
+if(PROJECT STREQUAL "vest3")
+  list(FILTER app_sources EXCLUDE REGEX ".*blaster_main.cpp")
+endif()
+
 if(PROJECT STREQUAL "blaster1")
   list(FILTER app_sources EXCLUDE REGEX ".*vest_main.cpp")
 endif()
@@ -20,6 +24,10 @@ if(PROJECT STREQUAL "blaster2")
 endif()
 
 if(PROJECT STREQUAL "blaster3")
+  list(FILTER app_sources EXCLUDE REGEX ".*vest_main.cpp")
+endif()
+
+if(PROJECT STREQUAL "blaster4")
   list(FILTER app_sources EXCLUDE REGEX ".*vest_main.cpp")
 endif()
 

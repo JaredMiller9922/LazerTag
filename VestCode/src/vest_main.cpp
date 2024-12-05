@@ -38,11 +38,12 @@ extern "C" void app_main(void) {
     // Infinite Program Logic
     while(true) {
 
-        vTaskDelay(10);
         Vest::setLifeCountLED(getLife());
         if(getLife() <= 0){
+            ESP_LOGI(TAG, "Death Sequence Called");
             Vest::deathSequence();
         }
+        vTaskDelay(10);
     }
     ESP_LOGI("main", "Program Terminated");
 }

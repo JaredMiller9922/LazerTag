@@ -37,6 +37,7 @@ extern "C" void app_main(void) {
         if (gpio_get_level(TRIGGER_PIN) == 0){
         // fire(ownMac)
         Blaster::sendMacAddressIR();
+        ESP_LOGI(TAG, "in paring loop");
 
         } 
     }

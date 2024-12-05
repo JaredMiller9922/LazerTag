@@ -63,6 +63,7 @@ int Blaster::takeDamage(int damage)
     ESP_LOGI(TAG, "Player: %04X Has Taken Damage, Current Health is: %d", getTeam(), getLife());
     if (health <= 0)
     {
+        ESP_LOGI(TAG, "Death Sequence Called");
         // Send death message to vest 
         deathSequence();
     }
@@ -77,14 +78,16 @@ int Blaster::takeDamage(int damage)
 
 void Blaster::fire(uint8_t gunType)
 {
+    GPIOHelper::setPinsHighForDuration(MOTOR1, gunType * 1000); 
+    ESP_LOGI(TAG, "motor should be going off right now");
     // Concatenate the team address with the player address
     uint16_t address = (getTeam() << 8) | getLife();
     
     // Add a tag to the command to indicate damage (this is done to prevent the mac address from registering as damage)
     uint16_t command = (0x02 << 8) | gunType; // 0x02 indicates this is a damage command
+    ESP_LOGI(TAG, "Fire Method - Address: %04X, Command: %04X", address, command);
 
     IRTransmitter::transmit(address, command); // Send damage command
-    ESP_LOGI(TAG, "Fire Method - Address: %04X, Command: %04X", address, command);
 }
 
 
@@ -107,8 +110,6 @@ bool Blaster::onCommandReceived(uint16_t address, uint16_t command)
 
 void Blaster::deathSequence()
 {
-
-   
     while (true)
     {
         ESP_LOGI(TAG, "Player %04X has been killed", playerAddress); 
