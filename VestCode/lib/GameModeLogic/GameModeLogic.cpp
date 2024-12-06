@@ -23,6 +23,7 @@
 #define READY_TO_FIRE_3 GPIO_NUM_5
 #define READY_TO_FIRE_4 GPIO_NUM_4
 #define PACK_A_PUNCH GPIO_NUM_42
+#define PACK_A_PUNCH_LED GPIO_NUM_2
 
 // Static member variables
 uint8_t GameModeLogic::gunDamage = 1;
@@ -34,13 +35,14 @@ uint8_t GameModeLogic::prevTriggerButtonState = 1;
 uint8_t GameModeLogic::prevReloadButtonState = 1;
 uint8_t GameModeLogic::prevFlashlightButtonState = 1;
 bool GameModeLogic::flashlightOn = false;
+bool GameModeLogic::packAPunchActive = false;
 
 static const gpio_num_t allWeaponLeds[] = {
-    PISTOL_LED, 
-    MACHINE_GUN_LED, 
-    RIFLE_LED, 
-    ROCKET_LED
-};
+    PISTOL_LED,
+    MACHINE_GUN_LED,
+    RIFLE_LED,
+    ROCKET_LED,
+    PACK_A_PUNCH_LED};
 
 // Initialize all pins and components
 void GameModeLogic::initialize()
@@ -66,43 +68,56 @@ void GameModeLogic::initialize()
     GPIOHelper::initializePinLED(READY_TO_FIRE_2);
     GPIOHelper::initializePinLED(READY_TO_FIRE_3);
     GPIOHelper::initializePinLED(READY_TO_FIRE_4);
+    GPIOHelper::initializePinLED(PACK_A_PUNCH_LED);
 }
 
 // Main game loop
 void GameModeLogic::run()
 {
+    // Pack A Punch Logic
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << PACK_A_PUNCH),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_ENABLE,
+        .intr_type = GPIO_INTR_DISABLE};
+    gpio_config(&io_conf);
     initialize();
     while (true)
     {
+        ESP_LOGI("pack a punch", "%d", packAPunchActive);
+  
+        ESP_LOGI("clip capacity", "%d", clipCapacity);
+        ESP_LOGI("clip level", "%d", clipLevel);
+
         updateClipLED(clipLevel, clipCapacity);
         int trigger_button_state = gpio_get_level(TRIGGER_PIN);
         int reload_button_state = gpio_get_level(RELOAD_BUTTON);
         int flashlight_button_state = gpio_get_level(FLASHLIGHT_BUTTON);
 
-        // Pack A Punch Logic
-        gpio_config_t io_conf = {
-            .pin_bit_mask = (1ULL << PACK_A_PUNCH),
-            .mode = GPIO_MODE_INPUT,
-            .pull_up_en = GPIO_PULLUP_DISABLE,
-            .pull_down_en = GPIO_PULLDOWN_ENABLE,
-            .intr_type = GPIO_INTR_DISABLE
-        };
-        gpio_config(&io_conf);
-        if (gpio_get_level(PACK_A_PUNCH)){
+        if (gpio_get_level(PACK_A_PUNCH))
+        {
             printf("Pack A Punch Pin is HIGH\n");
+            selectGun(10, PACK_A_PUNCH_LED, 5, 10, 10);
+            clipLevel = 5;
+            packAPunchActive = true;
         }
-        else 
-            printf("LOL IDK Man");
-
         // Fire if the button has been pressed
         if (trigger_button_state == 0 && prevTriggerButtonState == 1)
         {
+            ESP_LOGI("Just got here ", TAG);
+            
             if (clipLevel > 0)
             {
                 clipLevel -= 1;
                 Blaster::fire(gunDamage);
                 ESP_LOGI(TAG, "fired with ammo remaining: %d", clipLevel);
                 indicateFireReady(fireRate);
+            }
+            else if (clipLevel <= 0 && packAPunchActive)
+            {
+                packAPunchActive = false;
+                GameModeLogic::selectGun(1, PISTOL_LED, 10, 10, 400);
             }
         }
         prevTriggerButtonState = trigger_button_state;
@@ -133,14 +148,17 @@ void GameModeLogic::run()
         }
         if (reload_button_state == 0 && prevReloadButtonState == 1)
         {
+           if(!packAPunchActive){
             ESP_LOGI(TAG, "Reloading for: %d", reloadTimer);
             reload(reloadTimer);
             clipLevel = clipCapacity;
             ESP_LOGI(TAG, "Reloading complete: %d", reloadTimer);
+           }
         }
         prevReloadButtonState = reload_button_state;
-        if(getLife() <= 0){
-            
+        if (getLife() <= 0)
+        {
+
             Blaster::deathSequence();
         }
         vTaskDelay(10);
@@ -184,35 +202,40 @@ void GameModeLogic::updateClipLED(uint8_t clipLevel, uint8_t clipCapacity)
 
 void GameModeLogic::reload(uint16_t reloadTime)
 {
-    // Set up the intervals for the reload process
-    uint16_t halfReloadTime = reloadTime / 2;
-    uint16_t interval = reloadTime / 20; // Divide reload time into 20 smaller intervals for finer control
-
-    // Start with red LED on and other LEDs off
-    gpio_set_level(CLIP_LEVEL_RED, 1);
-    gpio_set_level(CLIP_LEVEL_YELLO, 0);
-    gpio_set_level(CLIP_LEVEL_GREEN, 0);
-    ESP_LOGI(TAG, "Reload started. Red LED on.");
-
-    for (uint16_t elapsed = 0; elapsed < reloadTime; elapsed += interval)
+    if (!packAPunchActive)
     {
-        vTaskDelay(interval / portTICK_PERIOD_MS);
 
-        // Update LEDs based on progress
-        if (elapsed >= halfReloadTime)
-        {
-            // 50% complete: Turn yellow LED on and red LED off
-            gpio_set_level(CLIP_LEVEL_RED, 0);
-            gpio_set_level(CLIP_LEVEL_YELLO, 1);
-            ESP_LOGI(TAG, "Reload half complete. Yellow LED on.");
-        }
+        ESP_LOGI(TAG, "%d",packAPunchActive);
+        // Set up the intervals for the reload process
+        uint16_t halfReloadTime = reloadTime / 2;
+        uint16_t interval = reloadTime / 20; // Divide reload time into 20 smaller intervals for finer control
 
-        if (elapsed >= reloadTime - interval)
+        // Start with red LED on and other LEDs off
+        gpio_set_level(CLIP_LEVEL_RED, 1);
+        gpio_set_level(CLIP_LEVEL_YELLO, 0);
+        gpio_set_level(CLIP_LEVEL_GREEN, 0);
+        ESP_LOGI(TAG, "Reload started. Red LED on.");
+
+        for (uint16_t elapsed = 0; elapsed < reloadTime; elapsed += interval)
         {
-            // 100% complete: Turn green LED on and turn off others
-            gpio_set_level(CLIP_LEVEL_YELLO, 0);
-            gpio_set_level(CLIP_LEVEL_GREEN, 1);
-            ESP_LOGI(TAG, "Reload complete. Green LED on.");
+            vTaskDelay(interval / portTICK_PERIOD_MS);
+
+            // Update LEDs based on progress
+            if (elapsed >= halfReloadTime)
+            {
+                // 50% complete: Turn yellow LED on and red LED off
+                gpio_set_level(CLIP_LEVEL_RED, 0);
+                gpio_set_level(CLIP_LEVEL_YELLO, 1);
+                ESP_LOGI(TAG, "Reload half complete. Yellow LED on.");
+            }
+
+            if (elapsed >= reloadTime - interval)
+            {
+                // 100% complete: Turn green LED on and turn off others
+                gpio_set_level(CLIP_LEVEL_YELLO, 0);
+                gpio_set_level(CLIP_LEVEL_GREEN, 1);
+                ESP_LOGI(TAG, "Reload complete. Green LED on.");
+            }
         }
     }
 }
@@ -250,7 +273,8 @@ void GameModeLogic::indicateFireReady(uint16_t fireRate)
 void GameModeLogic::selectGun(uint8_t damage, gpio_num_t ledPin, uint8_t capacity, uint16_t rate, uint16_t reloadTime)
 {
     // Turn off all other LEDs
-    for (int i = 0; i < sizeof(allWeaponLeds) / sizeof(allWeaponLeds[0]); i++) {
+    for (int i = 0; i < sizeof(allWeaponLeds) / sizeof(allWeaponLeds[0]); i++)
+    {
         gpio_set_level(allWeaponLeds[i], 0);
     }
 

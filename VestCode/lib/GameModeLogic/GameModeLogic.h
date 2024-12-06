@@ -30,12 +30,14 @@ private:
     static uint8_t prevReloadButtonState;
     static uint8_t prevFlashlightButtonState;
     static bool flashlightOn;
+    static bool packAPunchActive;
     // Gun information 
     static uint8_t gunDamage;
     static uint8_t clipCapacity;
     static uint16_t fireRate;
     static uint16_t reloadTimer;
     static uint8_t clipLevel;
+
     // Private helper to initialize a pin
     void initializePin(gpio_num_t pin, bool isOutput);
 };
