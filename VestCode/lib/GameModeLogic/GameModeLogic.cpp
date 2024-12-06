@@ -22,6 +22,8 @@
 #define READY_TO_FIRE_2 GPIO_NUM_6
 #define READY_TO_FIRE_3 GPIO_NUM_5
 #define READY_TO_FIRE_4 GPIO_NUM_4
+#define PACK_A_PUNCH GPIO_NUM_42
+
 // Static member variables
 uint8_t GameModeLogic::gunDamage = 1;
 uint8_t GameModeLogic::clipCapacity = 10;
@@ -76,6 +78,21 @@ void GameModeLogic::run()
         int trigger_button_state = gpio_get_level(TRIGGER_PIN);
         int reload_button_state = gpio_get_level(RELOAD_BUTTON);
         int flashlight_button_state = gpio_get_level(FLASHLIGHT_BUTTON);
+
+        // Pack A Punch Logic
+        gpio_config_t io_conf = {
+            .pin_bit_mask = (1ULL << PACK_A_PUNCH),
+            .mode = GPIO_MODE_INPUT,
+            .pull_up_en = GPIO_PULLUP_DISABLE,
+            .pull_down_en = GPIO_PULLDOWN_ENABLE,
+            .intr_type = GPIO_INTR_DISABLE
+        };
+        gpio_config(&io_conf);
+        if (gpio_get_level(PACK_A_PUNCH)){
+            printf("Pack A Punch Pin is HIGH\n");
+        }
+        else 
+            printf("LOL IDK Man");
 
         // Fire if the button has been pressed
         if (trigger_button_state == 0 && prevTriggerButtonState == 1)
