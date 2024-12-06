@@ -122,8 +122,8 @@ void GameModeLogic::run()
             ESP_LOGI(TAG, "Reloading complete: %d", reloadTimer);
         }
         prevReloadButtonState = reload_button_state;
-        if(Blaster::health <= 0){
-            ESP_LOGI(TAG, "Death Sequence Called");
+        if(getLife() <= 0){
+            
             Blaster::deathSequence();
         }
         vTaskDelay(10);

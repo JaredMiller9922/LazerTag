@@ -76,33 +76,45 @@ bool GPIOHelper::initializePinAsOutput(gpio_num_t gpioNum) {
 }
 
 void GPIOHelper::setPinsHighTask(void *param) {
-    gpio_num_t *gpioPins = static_cast<gpio_num_t *>(param);
-    gpio_num_t gpioNum1 = gpioPins[0];
-    gpio_num_t gpioNum2 = gpioPins[1];
-    
-    // Set both pins low
-    gpio_set_level(gpioNum1, 1); // Set first pin high
-    gpio_set_level(gpioNum2, 1); // Set second pin high
-    vTaskDelay(pdMS_TO_TICKS(5000)); // Delay for 1 second (non-blocking)
+    // Cast the parameter to gpio_num_t
+    gpio_num_t gpioNum = *reinterpret_cast<gpio_num_t *>(param);
 
-    // Set both pins back to high
-    gpio_set_level(gpioNum1, 0); // Set first pin low
-    gpio_set_level(gpioNum2, 0); // Set second pin low
-    
-    delete[] gpioPins; // Free allocated memory
-    vTaskDelete(NULL); // Delete this task once done
+    ESP_LOGI("GPIOHelper", "Task started for GPIO pin %d", gpioNum);
+
+    // Set the pin high
+    ESP_LOGI("GPIOHelper", "Setting GPIO pin %d HIGH", gpioNum);
+    gpio_set_level(gpioNum, 1);
+
+    // Delay for the specified duration
+    ESP_LOGI("GPIOHelper", "GPIO pin %d will remain HIGH for 5000 ms", gpioNum);
+    vTaskDelay(pdMS_TO_TICKS(5000)); // Delay for 5 seconds
+
+    // Set the pin low
+    ESP_LOGI("GPIOHelper", "Setting GPIO pin %d LOW", gpioNum);
+    gpio_set_level(gpioNum, 0);
+
+    // Free the dynamically allocated memory
+    delete reinterpret_cast<gpio_num_t *>(param);
+
+    // Log task completion
+    ESP_LOGI("GPIOHelper", "Task for GPIO pin %d completed. Deleting task.", gpioNum);
+
+    // Delete the task when done
+    vTaskDelete(NULL);
 }
 
-// Method to start the task for setting two pins high for a duration
-void GPIOHelper::setPinsHighForDuration(gpio_num_t motor1, int durationMs) {
-    ESP_LOGI("gpiohelper", "I got here: setPinsHighForDuration called with GPIO pins %d for %d ms", motor1, durationMs);
-    
-    int level1 = gpio_get_level(motor1);
-    ESP_LOGI("gpiohelper", "Current level of motor1 (GPIO %d): %d", motor1, level1);
 
-    // Allocate an array to hold the GPIO pins
-    gpio_num_t *gpioPins = new gpio_num_t[1]{motor1};
-    
-    // Pass the array as a task parameter
-    xTaskCreate(setPinsHighTask, "setPinsHighTask", 1024, gpioPins, 1, NULL);
+
+void GPIOHelper::setPinsHighForDuration(gpio_num_t motor1, int durationMs) {
+    ESP_LOGI("gpiohelper", "setPinsHighForDuration called with GPIO pin %d for %d ms", motor1, durationMs);
+
+    // Dynamically allocate memory for the GPIO pin
+    gpio_num_t *param = new gpio_num_t(motor1);
+
+    // Create the task, passing the dynamically allocated memory
+    BaseType_t result = xTaskCreate(setPinsHighTask, "setPinsHighTask", 2048, param, 1, NULL);
+    if (result != pdPASS) {
+        ESP_LOGE("gpiohelper", "Failed to create setPinsHighTask");
+        delete param; // Clean up if task creation fails
+    }
 }

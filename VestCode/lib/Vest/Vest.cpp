@@ -31,6 +31,7 @@ void Vest::setup()
     lifeRGBLED = RGB_LED(GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6, true);
     // Intitialize Motor Pin
     GPIOHelper::initializePinAsOutput(MOTOR1);
+    
 
     // Start receiving on another thread
     xTaskCreate(&Vest::startReceiverTask, "StartReceivingTask", 4096, NULL, 5, NULL);
@@ -48,46 +49,47 @@ void Vest::startReceiverTask(void *pvParameters)
 
 int Vest::takeDamage(int damage)
 {
-    for(int x = 0; x < 19; x++){
-        ESP_LOGI(TAG, "player took %d damage", damage);
-    
-    }
+for(int x = 0; x < 19; x++){
+    ESP_LOGI(TAG, "player took %d damage", damage);
 
-    health = getLife() - damage;
-    if (health < 0) {
-        health = 0;
-    }
-    setLife(health);
-    GPIOHelper::setPinsHighForDuration(MOTOR1, damage * 500); 
-    ESP_LOGI(TAG, "Player: %04X Has Taken Damage, Current Health is: %d", getTeam(), getLife());
-    if (health <= 0) {
-        ESP_LOGI(TAG, "Death Sequence Called");
-        deathSequence();
-    }
-    GPIOHelper::setPinsHighForDuration(MOTOR1, 1000);
+}
+
+if ((getLife() - damage) < 0) {
+    setLife(0);
+}
+else{
+    setLife(getLife() - damage);
+}
+GPIOHelper::setPinsHighForDuration(MOTOR1, damage * 500); 
+ESP_LOGI(TAG, "Player: %04X Has Taken Damage, Current Health is: %d", getTeam(), getLife());
+if (getLife() <= 0) {
+    ESP_LOGI(TAG, "Death Sequence Called");
+    deathSequence();
+}
+GPIOHelper::setPinsHighForDuration(MOTOR1, 1000);
 
 
-    char message[50];
-    sprintf(message, "Damage %d", health); // When damage is taken, seend new health
-    vest_send_message(message);
+char message[50];
+sprintf(message, "Damage %d", getLife()); // When damage is taken, seend new health
+vest_send_message(message);
 
-    return health;
+return getLife();
 }
 
 
 
 bool Vest::onCommandReceived(uint16_t address, uint16_t command){
-    static uint16_t received_mac_parts[3];
-    static int partIndex = 0;
+static uint16_t received_mac_parts[3];
+static int partIndex = 0;
 
-    if (paring) {
-        // Store the received MAC address parts in sequence
-        received_mac_parts[partIndex] = address;
-        partIndex++;
+if (paring) {
+    // Store the received MAC address parts in sequence
+    received_mac_parts[partIndex] = address;
+    partIndex++;
 
-        if (partIndex >= 3) {
-            // Once all parts are received, reconstruct the MAC address
-            gun_mac[0] = (received_mac_parts[0] >> 8) & 0xFF;
+    if (partIndex >= 3) {
+        // Once all parts are received, reconstruct the MAC address
+        gun_mac[0] = (received_mac_parts[0] >> 8) & 0xFF;
             gun_mac[1] = received_mac_parts[0] & 0xFF;
             gun_mac[2] = (received_mac_parts[1] >> 8) & 0xFF;
             gun_mac[3] = received_mac_parts[1] & 0xFF;
@@ -248,7 +250,6 @@ bool Vest::getParingStatus(){
 }
 
 void Vest::setLifeCountLED(uint8_t curLife) {
-    // Assuming maxLife is defined elsewhere
     float lifePercentage = (float)curLife / startingHealth;
 
     if (lifePercentage == 1.0) {

@@ -19,7 +19,6 @@
 #define PLAYER2_ADDR 0x02
 
 // Initialize static variables here to allocate space 
-int Vest::health;
 uint8_t Vest::teamAddress;
 uint8_t Vest::playerAddress;
 

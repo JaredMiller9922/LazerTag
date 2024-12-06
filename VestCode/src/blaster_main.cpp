@@ -48,6 +48,7 @@ extern "C" void app_main(void) {
     while (!setUpComplete){
         ESP_LOGI(TAG, "getLife: %d", getLife());
         if (getLife() > 0){
+            getLife();
             ESP_LOGI(TAG, "getTeam: %d", getTeam());
             setUpComplete = true;
         }

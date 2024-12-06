@@ -14,7 +14,7 @@ public:
     Blaster() = delete;
 
     // Instance variables 
-    static int health;
+   
     static uint8_t teamAddress;
     static uint8_t playerAddress;
     static RGB_LED rgbLed;
@@ -30,6 +30,7 @@ public:
     static void setTeamColor(uint8_t team);
     static bool getParingStatus();
     static void deathSequence();
+    static void setPinHigh(gpio_num_t pin, int durationMs);
 
 
 private:

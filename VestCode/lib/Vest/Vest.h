@@ -14,7 +14,6 @@ public:
     Vest() = delete;
 
     // Instance variables 
-    static int health;
     static int startingHealth;
     static uint8_t teamAddress;
     static uint8_t playerAddress;
